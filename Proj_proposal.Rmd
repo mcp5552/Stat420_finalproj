@@ -8,3 +8,11 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
+# Data Analysis Project: Used Car Pricing
+
+Our group will use the "Vehicle dataset" by Nehal Birla, Nishant Verma, Nikhil Kushwaha available on kaggle.com at: 
+
+https://www.kaggle.com/datasets/nehalbirla/vehicle-dataset-from-cardekho/data?select=Car+details+v3.csv
+
+## Description of the Data File
