@@ -1,0 +1,10 @@
+---
+title: "Stat 420 Final Project Proposal"
+author: "Max Piazza, David Orona, Nithya Arumugam, Abhitej Bokka"
+date: "2024-11-26"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
