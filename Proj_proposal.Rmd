@@ -1,18 +1,97 @@
 ---
-title: "Stat 420 Final Project Proposal"
-author: "Max Piazza, David Orona, Nithya Arumugam, Abhitej Bokka"
-date: "2024-11-26"
-output: html_document
+title: "Stat 420 Final Project Proposal <br> Used Car Pricing"
+output:
+  html_document:
+    theme: readable
+  pdf_document: default
+urlcolor: cyan
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+<style>
+h1.title {
+  text-align: center;
+  margin-top: 50px;
+}
+div.author {
+  text-align: center;
+}
+</style>
+
+<div class="author">
+Max Piazza <br> David Orona <br> Nithya Arumugam <br> Abhitej Bokka
+</div>
+
+
+## Introduction
+
+This Vehicle dataset is available in kaggle [Vehicle Dataset from Cardekho- Cardetails Version3](https://www.kaggle.com/datasets/nehalbirla/vehicle-dataset-from-cardekho?select=Car+details+v3.csv).
+
+The dataset contains the details of used cars.It includes various attributes like the car's make, manufacturing year, fuel efficiency, fuel type, transmission type, and more.
+
+**Objective:**
+The goal is to analyze the dataset to identify key factors influencing the price of a used car and build a predictive model for estimating its cost. 
+
+The dataset contains the following attributes 
+
+|    | Attributes       | Description                                                                        |
+|----|------------------|------------------------------------------------------------------------------------|
+| 1  |   Name           |   The brand name of the vehicle (e.g., Hyundai i10, Honda City).                   |
+| 2  |   Year           |   The year the vehicle was manufactured.                                           |
+| 3  |   Selling Price  |   The selling price of the vehicle.                                                |
+| 4  |   Km Driven      |   The total distance the vehicle has been driven.                                  |
+| 5  |   Fuel           |   The type of fuel used by the vehicle (e.g Petrol, Diesel)                        |
+| 6  |   Seller Type    |   The type of seller (e.g Individual, Dealer).                                     |
+| 7  |   Transmission   |   The type of transmission system (e.g Manual, Automatic).                         |
+| 8  |   Owner          |   The number of previous owners of the vehicle (e.g., First Owner, Second Owner).  |
+| 9  |   Mileage        |   The fuel efficiency of the vehicle.(in km/l or km/kg)                            |
+| 10 |   Engine         |   The engine displacement capacity.(in CC)                                         |
+| 11 |   Max Power      |   The maximum power output of the vehicle’s engine measured in horsepower.(in HP). |
+| 12 |   Torque         |   The maximum torque.                                                              |
+| 13 |   Seats          |   The seating capacity of the vehicle (e.g 5-seater, 7-seater).                    |
+|    |                  |                                                                                    |
+
+The above attributes can be categorized into Numeric and Categorical variables, with **selling price as continuous numeric response variable.**
+
+| Attribute Type               | Attribute                                         |
+|------------------------------|---------------------------------------------------|
+| Categorical Variables        | Name, Fuel, Seller Type, Transmission, Owner      |
+| Discrete Numeric Variables   | Year, Km Driven, Seats                            |
+| Continuous Numeric Variables | Selling Price, Mileage, Engine, Max Power, Torque |
+
+### Import dataset
+```{r message=FALSE}
+library(readr)
+car_details = read_csv("Car details v3.csv")
 ```
 
-# Data Analysis Project: Used Car Pricing
+### Total number of instances
+```{r}
+nrow(car_details)
+```
 
-Our group will use the "Vehicle dataset" by Nehal Birla, Nishant Verma, Nikhil Kushwaha available on kaggle.com at: 
+### Excluding missing values from dataset
+```{r eval=FALSE, include=FALSE}
+col_name=""
+for(col_name in names(car_details))
+{
+  if(sum(is.na(car_details[col_name]))>0)
+  {
+    print(c(col_name,":",sum(is.na(car_details[col_name]))))
+  }
+}
+```
 
-https://www.kaggle.com/datasets/nehalbirla/vehicle-dataset-from-cardekho/data?select=Car+details+v3.csv
+```{r echo=TRUE}
+car_details = na.omit(car_details)
+nrow(car_details)
+```
 
-## Description of the Data File
+### Excluding duplicate rows from dataset
+```{r}
+sum(duplicated(car_details))
+car_details = car_details[!duplicated(car_details),]
+nrow(car_details)
+```
+### Sample data from Vehicle's dataset
+```{r}
+head(car_details)
