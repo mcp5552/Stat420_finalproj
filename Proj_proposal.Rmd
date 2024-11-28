@@ -24,7 +24,7 @@ Max Piazza <br> David Orona <br> Nithya Arumugam <br> Abhitej Bokka
 
 ## Introduction
 
-This Vehicle dataset is available in kaggle [Vehicle Dataset from Cardekho- Cardetails Version3](https://www.kaggle.com/datasets/nehalbirla/vehicle-dataset-from-cardekho?select=Car+details+v3.csv).
+This Vehicle dataset is available in kaggle: [Vehicle Dataset from Cardekho- Cardetails Version3](https://www.kaggle.com/datasets/nehalbirla/vehicle-dataset-from-cardekho?select=Car+details+v3.csv).
 
 The dataset contains the details of used cars. It includes various attributes like the car's make, manufacturing year, fuel efficiency, fuel type, transmission type, and more.
 
