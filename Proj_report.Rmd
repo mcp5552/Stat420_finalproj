@@ -1,0 +1,28 @@
+---
+title: "Stat 420 Final Project Report"
+author: "Max Piazza, David Orona, Nithya Arumugam, Abhitej Bokka"
+date: "2024-12-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Data Analysis Project: Modeling Used Car Prices
+
+
+## Introduction
+
+
+## Methods
+
+
+## Results
+
+
+## Discussion
+
+
+## Appendix
+
