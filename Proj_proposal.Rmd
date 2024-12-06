@@ -5,9 +5,12 @@ date: "2024-11-26"
 output: html_document
 ---
 
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
 ```
+
 
 # Data Analysis Project: Used Car Pricing
 
@@ -98,5 +101,189 @@ car_details_v3 = read_csv("dataset/Car details v3.csv")
 head(car_details_v4)
 head(car_details_v3)
 ```
+
+
+
+
+
+
+```{r}
+
+# Getting the proper libraries and reading data
+library(tidyverse)
+library(car)
+library(broom)
+library(MASS)
+library(boot)
+library(lmtest)
+
+# I set up all these packages beforehand
+```
+
+
+
+```{r, last}
+
+library(broom)
+
+# Step 1: Load and Prepare Data
+
+car_details_v3 <- read_csv("dataset/Car details v3.csv")
+
+# Data Cleaning and Transformation
+car_details_v3_clean <- car_details_v3 %>%
+  rename(
+    Make = name,
+    Year = year,
+    Price = selling_price,
+    Kilometer = km_driven,
+    `Fuel Type` = fuel,
+    `Seller Type` = seller_type,
+    Transmission = transmission,
+    Mileage = mileage,
+    Engine = engine,
+    `Max Power` = max_power,
+    Seats = seats
+  ) %>%
+  drop_na(Price, Kilometer, Year, `Fuel Type`, Transmission) %>%
+  mutate(
+    Year = as.numeric(Year),
+    Transmission = as.factor(Transmission),
+    `Fuel Type` = as.factor(`Fuel Type`),
+    `Seller Type` = as.factor(`Seller Type`)
+  )
+
+# Step 2: Create Mileage and Year Bins
+car_details_v3_clean <- car_details_v3_clean %>%
+  mutate(
+    # Simplify Mileage: Convert to numeric and bin
+    Mileage_numeric = as.numeric(gsub(" kmpl| km/kg", "", Mileage)),
+    Mileage_bin = cut(Mileage_numeric, breaks = c(0, 10, 15, 20, 25, Inf), labels = c("0-10", "10-15", "15-20", "20-25", "25+")),
+    # Bin Year into broader categories
+    Year_bin = case_when(
+      Year >= 1995 & Year <= 1999 ~ "1995-1999",
+      Year >= 2000 & Year <= 2004 ~ "2000-2004",
+      Year >= 2005 & Year <= 2009 ~ "2005-2009",
+      Year >= 2010 & Year <= 2014 ~ "2010-2014",
+      Year >= 2015 & Year <= 2020 ~ "2015-2020",
+      TRUE ~ "Other"
+    ),
+    Year_bin = factor(Year_bin, levels = c("1995-1999", "2000-2004", "2005-2009", "2010-2014", "2015-2020", "Other"))
+  )
+
+# Step 3: Exploratory Data Analysis
+# Obtaining Summary statistics
+summary(car_details_v3_clean)
+
+# Defining a function to remove outliers based on IQR
+remove_outliers <- function(data, column) {
+  Q1 <- quantile(data[[column]], 0.25, na.rm = TRUE)
+  Q3 <- quantile(data[[column]], 0.75, na.rm = TRUE)
+  IQR <- Q3 - Q1
+  data %>%
+    filter(data[[column]] >= (Q1 - 1.5 * IQR) & data[[column]] <= (Q3 + 1.5 * IQR))
+}
+
+# Removing outliers for plots
+car_details_no_outliers <- car_details_v3_clean %>%
+  remove_outliers("Price") %>%
+  remove_outliers("Kilometer")
+
+# Visualization: Kilometer vs Price without outliers
+ggplot(car_details_no_outliers, aes(x = Kilometer, y = Price, color = `Fuel Type`)) +
+  geom_point(alpha = 0.6) +
+  labs(title = "Kilometer vs Price by Fuel Type (No Outliers)")
+
+# Visualization: Distribution of Mileage Bins without outliers
+ggplot(car_details_no_outliers, aes(x = Mileage_bin)) +
+  geom_bar() +
+  labs(title = "Distribution of Mileage Bins (No Outliers)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Visualization: Boxplot of Price by Year Bins without outliers
+ggplot(car_details_no_outliers, aes(x = Year_bin, y = Price)) +
+  geom_boxplot() +
+  labs(title = "Price Distribution by Year Bins (No Outliers)", x = "Year Bins", y = "Price")
+
+
+# Step 4: Develop and Refine Model
+# Our Initial model
+model_initial <- lm(Price ~ Kilometer + `Fuel Type` + Transmission + Mileage_bin + Seats + Year_bin, data = car_details_v3_clean)
+
+# Checking for multicollinearity using VIF
+vif_initial <- vif(model_initial)
+print(vif_initial)
+
+# Refining model using stepwise selection
+model_refined <- step(model_initial, direction = "both")
+summary(model_refined)
+
+# Step 5: Residual Diagnostics
+# Diagnostic Plots
+par(mfrow = c(2, 2))
+plot(model_refined)
+par(mfrow = c(1, 1))
+
+# Testing for normality of residuals using Q-Q plot
+qqnorm(residuals(model_refined))
+qqline(residuals(model_refined), col = "red")
+
+# Testing for homoscedasticity using Breusch-Pagan test
+bp_test <- bptest(model_refined)
+print(bp_test)
+
+# Step 6: Model Validation
+# Spliting data into training and testing sets
+set.seed(123)
+train_indices <- sample(1:nrow(car_details_v3_clean), size = 0.7 * nrow(car_details_v3_clean))
+train_data <- car_details_v3_clean[train_indices, ]
+test_data <- car_details_v3_clean[-train_indices, ]
+
+# Training model
+model_train <- lm(Price ~ Kilometer + `Fuel Type` + Transmission + Mileage_bin + Seats + Year_bin, data = train_data)
+
+# Working with predictions
+predictions <- predict(model_train, newdata = test_data)
+actuals <- test_data$Price
+
+# Calculating RMSE and R-squared
+rmse <- sqrt(mean((predictions - actuals)^2))
+r_squared <- 1 - (sum((predictions - actuals)^2) / sum((actuals - mean(actuals))^2))
+
+cat("RMSE:", rmse, "\nR-squared:", r_squared, "\n")
+
+# Step 7: Confidence Intervals and ANOVA
+# Confidence intervals for coefficients
+conf_intervals <- confint(model_refined)
+print(conf_intervals)
+
+# Obtaining ANOVA for variable significance
+anova_results <- anova(model_refined)
+print(anova_results)
+
+# Step 8: Final Model Interpretation
+cat("Final Model Summary:\n")
+summary(model_refined)
+
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
       
