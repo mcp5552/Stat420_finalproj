@@ -1,0 +1,357 @@
+---
+title: "Stat 420 Final Project Proposal <br> Used Car Pricing"
+output: 
+  html_document:
+    theme: readable
+  pdf_document: default
+urlcolor: cyan
+---
+
+<style>
+h1.title {
+  text-align: center;
+  margin-top: 50px;
+}
+div.author {
+  text-align: center;
+}
+</style>
+
+<div class="author">
+Max Piazza <br> David Orona <br> Nithya Arumugam <br> Abhitej Bokka
+</div>
+
+
+## Introduction
+
+This Vehicle dataset is available in kaggle [Vehicle Dataset from Cardekho- Cardetails Version3](https://www.kaggle.com/datasets/nehalbirla/vehicle-dataset-from-cardekho?select=Car+details+v3.csv).
+
+The dataset contains the details of used cars.It includes various attributes like the car's make, manufacturing year, fuel efficiency, fuel type, transmission type, and more.
+
+**Objective:**
+The goal is to analyze the dataset to identify key factors influencing the price of a used car and build a predictive model for estimating its cost. 
+
+The dataset contains the following attributes 
+
+|    | Attributes       | Description                                                                        |
+|----|------------------|------------------------------------------------------------------------------------|
+| 1  |   Name           |   The brand name of the vehicle (e.g., Hyundai i10, Honda City).                   |
+| 2  |   Year           |   The year the vehicle was manufactured.                                           |
+| 3  |   Selling Price  |   The selling price of the vehicle in INR.                                               |
+| 4  |   Km Driven      |   The total distance the vehicle has been driven.                                  |
+| 5  |   Fuel           |   The type of fuel used by the vehicle (e.g Petrol, Diesel)                        |
+| 6  |   Seller Type    |   The type of seller (e.g Individual, Dealer).                                     |
+| 7  |   Transmission   |   The type of transmission system (e.g Manual, Automatic).                         |
+| 8  |   Owner          |   The number of previous owners of the vehicle (e.g., First Owner, Second Owner).  |
+| 9  |   Mileage        |   The fuel efficiency of the vehicle.(in km/l or km/kg)                            |
+| 10 |   Engine         |   The engine displacement capacity.(in CC)                                         |
+| 11 |   Max Power      |   The maximum power output of the vehicle’s engine measured in horsepower.(in HP). |
+| 12 |   Torque         |   The maximum torque.                                                              |
+| 13 |   Seats          |   The seating capacity of the vehicle (e.g 5-seater, 7-seater).                    |
+|    |                  |                                                                                    |
+
+The above attributes can be categorized into Numeric and Categorical variables, with **selling price as continuous numeric response variable.**
+
+| Attribute Type               | Attribute                                         |
+|------------------------------|---------------------------------------------------|
+| Categorical Variables        | Name, Fuel, Seller Type, Transmission, Owner      |
+| Discrete Numeric Variables   | Year, Km Driven, Seats                            |
+| Continuous Numeric Variables | Selling Price, Mileage, Engine, Max Power, Torque |
+
+### Import dataset
+```{r message=FALSE}
+library(readr)
+car_details = read_csv("Car details v3.csv")
+```
+
+### Total number of instances
+```{r}
+nrow(car_details)
+```
+
+### Excluding missing values from dataset
+```{r eval=FALSE, include=FALSE}
+col_name=""
+for(col_name in names(car_details))
+{
+  if(sum(is.na(car_details[col_name]))>0)
+  {
+    print(c(col_name,":",sum(is.na(car_details[col_name]))))
+  }
+}
+```
+
+```{r echo=TRUE}
+car_details = na.omit(car_details)
+nrow(car_details)
+```
+
+### Excluding duplicate rows from dataset
+```{r}
+sum(duplicated(car_details))
+car_details = car_details[!duplicated(car_details),]
+nrow(car_details)
+```
+### Sample data from Vehicle's dataset
+```{r}
+head(car_details)
+```
+
+### Data cleaning
+```{r}
+library(stringr)
+
+# Extract the first word from "name" 
+car_details$name = word(car_details$name,1)
+# Rename name to make
+colnames(car_details)[1] = "make"
+# Change datatypes of "make" from character to factor
+car_details$make = as.factor(car_details$make)
+
+# Extract the numeric value from mileage
+car_details$mileage = word(car_details$mileage,1)
+#Change data_type of "mileage" from character to numeric
+car_details$mileage=as.numeric(car_details$mileage)
+
+# Extract the numeric value from engine
+car_details$engine = word(car_details$engine,1)
+#Change data_type of "engine" from character to numeric
+car_details$engine=as.numeric(car_details$engine)
+
+# Extract the numeric value from max_power
+car_details$max_power = word(car_details$max_power,1)
+#Change data_type of "max_power" from character to numeric
+car_details$max_power=as.numeric(car_details$max_power)
+
+# Change datatypes of "fuel", "seller_type", "transmission"	
+# From character to factor
+car_details$fuel=as.factor(car_details$fuel)
+car_details$seller_type=as.factor(car_details$seller_type)
+car_details$transmission=as.factor(car_details$transmission)
+
+# Encode numeric values for 1st/2nd/.. owner and convert to factor data type
+car_details$owner=as.factor(car_details$owner)
+
+##KM driven in ten thousands
+car_details$km_driven = car_details$km_driven/10000
+#Rename  km_driven
+colnames(car_details)[4]="km_driven_in_10k"
+
+#Dropping column torque
+car_details = car_details[,!names(car_details) %in% "torque"]
+
+#Selling price in ten thousands
+car_details$selling_price = car_details$selling_price/10000
+#Rename Selling price
+colnames(car_details)[3]="selling_price_in_10k"
+```
+
+### Sample data
+```{r}
+head(car_details)
+```
+
+
+### Data analysis
+#### Number of cars in each make
+```{r echo=FALSE}
+make_counts = sort(table(car_details$make),decreasing = TRUE)
+make_counts_df = data.frame(make = names(make_counts), count = as.numeric(make_counts))
+make_counts_df
+```
+
+### Creating new varaible make_category
+
+- To reduce the model complexity and to increase interpretability, the car make can be grouped into broader categories as "Budget", "Mid-Range" or "Luxury" depending on general market perception
+
+```{r}
+car_details$make_category = ifelse(car_details$make %in% 
+                                     c("Maruti", "Hyundai", "Tata", "Mahindra", "Datsun", 
+                                        "Renault", "Chevrolet", "Fiat", "Kia", "Isuzu", 
+                                        "Force", "Daewoo", "Ambassador", "Ashok"), 
+                                    "Budget",
+                             ifelse(car_details$make %in% 
+                                      c("Honda", "Ford", "Toyota", "Volkswagen", "Nissan", 
+                                        "Skoda", "Jeep", "Mitsubishi", "MG", "Land"), 
+                                    "Midrange", 
+                                    "Luxury"))
+car_details$make_category = as.factor(car_details$make_category)
+levels(car_details$make_category)
+```
+### Final structure of car_details 
+```{r}
+structure_car_details = data.frame(
+  Column = names(car_details),
+  Type = unname(sapply(car_details, class))
+)
+```
+
+### Structure of car_details
+```{r}
+print(structure_car_details)
+```
+
+```{r}
+barplot(sort(table(car_details$make)),horiz=TRUE,las=1,
+        xlab ="Number of cars",
+        ylab = "Car Make",
+        col=rainbow(length(unique(car_details$make))),
+        cex.names = 0.5,main="Num.of cars in each make")
+```
+
+
+### Selling Price distribution
+```{r}
+hist(car_details$selling_price_in_10k,xlab="Selling Price (in Ten Thousands)",main="Selling Price distribution")
+```
+
+### Selling Price based on make
+```{r}
+boxplot(selling_price_in_10k ~ make, data = car_details,col=rainbow(length(unique(car_details$make))),
+        las = 2,cex.axis = 0.7,               
+        main = "Selling Price by Make",
+        xlab = "Car Make",
+        ylab = "Selling Price (in 10k)")
+```
+
+```{r echo=FALSE}
+par(mfrow = c(2, 2))
+fuel_type_car_count = table(car_details$fuel)
+seller_type_car_count = table(car_details$seller_type)
+
+barplot(sort(fuel_type_car_count),horiz=TRUE,las=1,cex.names = 0.9,
+        main="Num.of cars in each fuel type")
+barplot(sort(seller_type_car_count),horiz=TRUE,las=1,cex.names = 0.8,
+        main="Num.of cars in each seller_type")
+trans_type_car_count = table(car_details$transmission)
+owner_type_car_count = table(car_details$owner)
+barplot(sort(trans_type_car_count),horiz=TRUE,las=1,cex.names = 0.8,
+        main="Num.of cars in each transmission type")
+barplot(sort(owner_type_car_count),horiz=TRUE,las=1,cex.names = 0.6,
+        main="Num.of cars in each owner type")
+fuel_type_car_count
+seller_type_car_count
+trans_type_car_count
+owner_type_car_count
+```
+
+```{r echo=FALSE}
+par(mfrow = c(1, 2))
+boxplot(selling_price_in_10k ~ fuel, data=car_details,cex.axis = 0.8,
+     main="SellingPrice based on fuel type")
+plot(selling_price_in_10k ~ seller_type, data=car_details,cex.axis = 0.6,
+     main="SellingPrice based on seller type")
+par(mfrow = c(1, 2))
+plot(selling_price_in_10k ~ transmission, data=car_details,
+     main="SellingPrice based on trans. type")
+plot(selling_price_in_10k ~ owner, data=car_details,las=2,cex.axis = 0.5,
+     main="SellingPrice based on owner type")
+```
+
+
+
+### Selling Price based on year with Transmission Type
+
+```{r}
+colours = ifelse(car_details$transmission == "Automatic", "blue", "red")
+plot(selling_price_in_10k ~ year,data=car_details,col=colours,pch=19,
+     main = "Selling Price by Year with Transmission Type",
+     xlab = "Year",
+     ylab = "Selling Price (in Ten Thousands)")
+legend("topleft", legend = c("Automatic", "Manual"),
+       col = c("blue", "red"), pch = 19)
+```
+
+### Selling Price based on year with Owner Type
+
+```{r}
+colours = ifelse(car_details$owner == "First Owner", "red",
+          ifelse(car_details$owner == "Second Owner", "blue",
+          ifelse(car_details$owner == "Third Owner", "green",
+          ifelse(car_details$owner == "Fourth & Above Owner", "orange", 
+          "yellow"))))
+plot(selling_price_in_10k ~ year,data=car_details,col=colours,pch=19,
+     main = "Selling Price by Year with Owner Categories",
+     xlab = "Year",
+     ylab = "Selling Price (in Ten Thousands)")
+
+legend("topleft", legend = c("First Owner","Second Owner","Third Owner","Fourth & Above Owner","Test Drive Car"),
+       col = c("red", "blue", "green", "orange", "yellow"), pch = 19)
+```
+
+
+```{r echo=FALSE}
+par(mfrow = c(1, 2))
+plot(selling_price_in_10k ~ km_driven_in_10k, data=car_details,
+     main="Price based on km_driven")
+plot(selling_price_in_10k ~ mileage, data=car_details,
+     main="Price based on Mileage")
+
+par(mfrow = c(1, 2))
+plot(selling_price_in_10k ~ engine, data=car_details,
+     main="Price based on engine")
+plot(selling_price_in_10k ~ max_power, data=car_details,
+     main="Price based on max_power")
+```
+
+### Correlation of the numeric variables in vehicle dataset
+```{r}
+pairs(selling_price_in_10k ~ year+km_driven_in_10k+mileage+engine+max_power+seats ,data=car_details)
+cor_mat = cor(car_details[,sapply(car_details,is.numeric)])
+cor_mat
+high_correlation = cor_mat[cor_mat > 0.5 & cor_mat != 1]
+high_cor_indices = which(cor_mat > 0.5 & cor_mat != 1, arr.ind = TRUE)
+data.frame(
+  row = rownames(cor_mat)[high_cor_indices[, 1]],
+  column = colnames(cor_mat)[high_cor_indices[, 2]],
+  correlation = high_correlation)
+```
+
+### Split data into train and test
+```{r}
+set.seed(125)  
+train_indices = sample(nrow(car_details), size = 0.80 * nrow(car_details))
+train_data = car_details[train_indices, ]
+test_data = car_details[-train_indices, ]
+nrow(train_data)
+nrow(test_data)
+```
+
+
+```{r}
+price_int_model = lm(selling_price_in_10k ~ make_category*year*max_power*transmission + owner + seller_type + km_driven_in_10k, data=train_data)
+summary(price_int_model)
+plot(price_int_model,which=1)
+```
+
+### BIC backward interaction model
+```{r}
+n= nrow(train_data)
+bic_model_int = step(price_int_model,direction="backward",k=log(n),trace=0)
+summary(bic_model_int)
+plot(bic_model_int,which=1)
+```
+
+### Influential points1
+```{r}
+indicies_to_exclude = unname(which(cooks.distance(bic_model_int) > 4/length(cooks.distance(bic_model_int))))
+sum(cooks.distance(bic_model_int) > 4/length(cooks.distance(bic_model_int)))
+train_data_filtered = train_data[-indicies_to_exclude,]
+```
+
+### Refitting the model without influential points
+```{r}
+#price_int_model = lm(selling_price_in_10k ~ make_category*year*max_power*transmission + owner + seller_type + km_driven_in_10k, data=train_data_filtered)
+#summary(price_int_model)
+#plot(price_int_model,which=1)
+```
+
+### BIC backward interaction model(without infuential data)
+```{r}
+#n= nrow(train_data_filtered)
+#bic_model_int = step(price_int_model,direction="backward",k=log(n),trace=0)
+#summary(bic_model_int)
+#plot(bic_model_int,which=1)
+```
+
+
