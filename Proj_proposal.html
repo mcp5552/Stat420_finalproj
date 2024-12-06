@@ -381,9 +381,9 @@ Bokka</p>
 </div>
 <div id="introduction" class="section level2">
 <h2>Introduction</h2>
-<p>This Vehicle dataset is available in kaggle <a href="https://www.kaggle.com/datasets/nehalbirla/vehicle-dataset-from-cardekho?select=Car+details+v3.csv">Vehicle
+<p>This Vehicle dataset is available in kaggle: <a href="https://www.kaggle.com/datasets/nehalbirla/vehicle-dataset-from-cardekho?select=Car+details+v3.csv">Vehicle
 Dataset from Cardekho- Cardetails Version3</a>.</p>
-<p>The dataset contains the details of used cars.It includes various
+<p>The dataset contains the details of used cars. It includes various
 attributes like the car’s make, manufacturing year, fuel efficiency,
 fuel type, transmission type, and more.</p>
 <p><strong>Objective:</strong> The goal is to analyze the dataset to
@@ -545,60 +545,6 @@ nrow(car_details)</code></pre>
 ## 6 Hyundai Xc…  2017        440000     45000 Petr… Individual  Manual       Firs…
 ## # ℹ 5 more variables: mileage &lt;chr&gt;, engine &lt;chr&gt;, max_power &lt;chr&gt;,
 ## #   torque &lt;chr&gt;, seats &lt;dbl&gt;</code></pre>
-</div>
-<div id="data-cleaning" class="section level3">
-<h3>Data cleaning</h3>
-<pre class="r"><code>library(stringr)
-
-# Extract the first word from &quot;name&quot; and store it in &quot;name&quot; column
-car_details$name = word(car_details$name,1)
-# Rename name to brand_name
-colnames(car_details)[1] = &quot;brand_name&quot;
-
-# Extract the numeric value from mileage
-car_details$mileage = word(car_details$mileage,1)
-# Rename mileage to km_per_unit
-colnames(car_details)[9] =  &quot;km_per_unit&quot;
-#Change data_type of &quot;km_per_unit&quot; from character to numeric
-car_details$km_per_unit=as.numeric(car_details$km_per_unit)
-
-# Extract the numeric value from engine
-car_details$engine = word(car_details$engine,1)
-#Change data_type of &quot;engine&quot; from character to numeric
-car_details$engine=as.numeric(car_details$engine)
-
-# Extract the numeric value from max_power
-car_details$max_power = word(car_details$max_power,1)
-#Change data_type of &quot;max_power&quot; from character to numeric
-car_details$max_power=as.numeric(car_details$max_power)
-
-# Change datatypes of &quot;fuel&quot;, &quot;seller_type&quot;, &quot;transmission&quot; &quot;owner&quot;
-# From character to factor
-car_details$fuel=as.factor(car_details$fuel)
-car_details$seller_type=as.factor(car_details$seller_type)
-car_details$transmission=as.factor(car_details$transmission)
-car_details$owner=as.factor(car_details$owner)
-
-
-structure_car_details = data.frame(
-  Column = names(car_details),
-  Type = unname(sapply(car_details, class))
-)
-print(structure_car_details)</code></pre>
-<pre><code>##           Column      Type
-## 1     brand_name character
-## 2           year   numeric
-## 3  selling_price   numeric
-## 4      km_driven   numeric
-## 5           fuel    factor
-## 6    seller_type    factor
-## 7   transmission    factor
-## 8          owner    factor
-## 9    km_per_unit   numeric
-## 10        engine   numeric
-## 11     max_power   numeric
-## 12        torque character
-## 13         seats   numeric</code></pre>
 </div>
 </div>
 
