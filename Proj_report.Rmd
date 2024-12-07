@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
 ```
 
 # Data Analysis Project: Modeling Used Car Prices
@@ -32,33 +32,21 @@ Using statistical modeling techniques, including regression analysis, we aim to 
 
 By the conclusion of this project, we aim to provide a detailed analysis that enhances understanding of the used car market, aiding stakeholders in making informed decisions in an ever-changing economic landscape.
 
-
-
-
-
-
-
 ```{r}
 
-# Getting the proper libraries and reading data
+# Load and attach all needed R packages
 library(tidyverse)
 library(car)
 library(broom)
 library(MASS)
 library(boot)
 library(lmtest)
-
-# I set up  all these packages beforehand
 ```
-
 
 
 ```{r, last}
 
-library(broom)
-
 # Step 1: Load and Prepare Data
-
 car_details_v3 <- read_csv("dataset/Car details v3.csv")
 
 # Data Cleaning and Transformation
@@ -84,6 +72,17 @@ car_details_v3_clean <- car_details_v3 %>%
     `Seller Type` = as.factor(`Seller Type`)
   )
 
+# Check if there are any missing values in 'Price' after cleaning
+sum(is.na(car_details_v3_clean$Price))  # Should return 0 if no missing values
+
+# Ensure Price column is numeric
+car_details_v3_clean$Price <- as.numeric(car_details_v3_clean$Price)
+
+# Perform log transformation
+car_details_v3_clean <- car_details_v3_clean %>%
+  mutate(log_price = log(Price + 1))  # Adding 1 to avoid log(0)
+
+
 # Step 2: Create Mileage and Year Bins
 car_details_v3_clean <- car_details_v3_clean %>%
   mutate(
@@ -102,39 +101,69 @@ car_details_v3_clean <- car_details_v3_clean %>%
     Year_bin = factor(Year_bin, levels = c("1995-1999", "2000-2004", "2005-2009", "2010-2014", "2015-2020", "Other"))
   )
 
+# Perform the Log Transformation of the Price column
+car_details_v3_clean <- car_details_v3_clean %>%
+  mutate(log_price = log(Price + 1))  # Adding 1 to avoid log(0) error
+
 # Step 3: Exploratory Data Analysis
 # Obtaining Summary statistics
 summary(car_details_v3_clean)
 
-# Defining a function to remove outliers based on IQR
-remove_outliers <- function(data, column) {
-  Q1 <- quantile(data[[column]], 0.25, na.rm = TRUE)
-  Q3 <- quantile(data[[column]], 0.75, na.rm = TRUE)
-  IQR <- Q3 - Q1
-  data %>%
-    filter(data[[column]] >= (Q1 - 1.5 * IQR) & data[[column]] <= (Q3 + 1.5 * IQR))
-}
+# # Defining a function to remove outliers based on IQR
+# remove_outliers <- function(data, column) {
+#   Q1 <- quantile(data[[column]], 0.25, na.rm = TRUE)
+#   Q3 <- quantile(data[[column]], 0.75, na.rm = TRUE)
+#   IQR <- Q3 - Q1
+#   data %>%
+#     filter(data[[column]] >= (Q1 - 1.5 * IQR) & data[[column]] <= (Q3 + 1.5 * IQR))
+# }
+# 
+# # Removing outliers for plots
+# car_details_no_outliers <- car_details_v3_clean %>%
+#   remove_outliers("Price") %>%
+#   remove_outliers("Kilometer")
+# 
+# # Visualization: Price vs Kilometer without outliers
+# ggplot(car_details_no_outliers, aes(x = Kilometer, y = Price, color = `Fuel Type`)) +
+#   geom_point(alpha = 0.6) +
+#   labs(title = "Price vs Kilometer by Fuel Type (No Outliers)")
+# 
+# # Visualization: Distribution of Mileage Bins without outliers
+# ggplot(car_details_no_outliers, aes(x = Mileage_bin)) +
+#   geom_bar() +
+#   labs(title = "Distribution of Mileage Bins (No Outliers)") +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+# 
+# # Visualization: Boxplot of Price by Year Bins without outliers
+# ggplot(car_details_no_outliers, aes(x = Year_bin, y = Price)) +
+#   geom_boxplot() +
+#   labs(title = "Price Distribution by Year Bins (No Outliers)", x = "Year Bins", y = "Price")
 
-# Removing outliers for plots
-car_details_no_outliers <- car_details_v3_clean %>%
-  remove_outliers("Price") %>%
-  remove_outliers("Kilometer")
+# Plots with outliers in data below, using ylim() and xlim() to focus on core data
 
-# Visualization: Kilometer vs Price without outliers
-ggplot(car_details_no_outliers, aes(x = Kilometer, y = Price, color = `Fuel Type`)) +
+# Visualization: Price vs Kilometer with Outliers
+ggplot(car_details_v3_clean, aes(x = Kilometer, y = Price, color = `Fuel Type`)) +
   geom_point(alpha = 0.6) +
-  labs(title = "Kilometer vs Price by Fuel Type (No Outliers)")
+  labs(title = "Price vs Kilometer by Fuel Type (With Outliers)")+
+       xlim(0,500000)
 
-# Visualization: Distribution of Mileage Bins without outliers
-ggplot(car_details_no_outliers, aes(x = Mileage_bin)) +
+# Visualization: Kilometer vs Price with Outliers (Axes limited)
+ggplot(car_details_v3_clean, aes(x = Kilometer, y = Price, color = `Fuel Type`)) +
+  geom_point(alpha = 0.6) +
+  labs(title = "Kilometer vs Price by Fuel Type (With Outliers)") +
+  xlim(0, 250000) +          # Limit x-axis to 250,000
+  ylim(0, 7.5e+06)           # Limit y-axis to 7.5 million
+
+# Visualization: Distribution of Mileage Bins with Outliers
+ggplot(car_details_v3_clean, aes(x = Mileage_bin)) +
   geom_bar() +
-  labs(title = "Distribution of Mileage Bins (No Outliers)") +
+  labs(title = "Distribution of Mileage Bins (With Outliers)") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-# Visualization: Boxplot of Price by Year Bins without outliers
-ggplot(car_details_no_outliers, aes(x = Year_bin, y = Price)) +
+# Visualization: Boxplot of Price by Year Bins with Outliers
+ggplot(car_details_v3_clean, aes(x = Year_bin, y = Price)) +
   geom_boxplot() +
-  labs(title = "Price Distribution by Year Bins (No Outliers)", x = "Year Bins", y = "Price")
+  labs(title = "Price Distribution by Year Bins (With Outliers)", x = "Year Bins", y = "Price")
 
 
 # Step 4: Develop and Refine Model
@@ -149,11 +178,41 @@ print(vif_initial)
 model_refined <- step(model_initial, direction = "both")
 summary(model_refined)
 
+# Extract the data used in the refined model into a data frame for analysis
+model_data <- model.frame(model_refined)
+
 # Step 5: Residual Diagnostics
 # Diagnostic Plots
 par(mfrow = c(2, 2))
 plot(model_refined)
 par(mfrow = c(1, 1))
+
+# Scatter plot of residuals vs Kilometer
+plot(model_data$Kilometer, residuals(model_refined), 
+     xlab = "Kilometer", ylab = "Residuals", 
+     main = "Residuals vs Kilometer",
+     xlim = c(0, 500000)  # Limit the x-axis to a maximum of 500,000 for better visualization
+     )
+
+# Boxplot of residuals by Fuel Type
+boxplot(residuals(model_refined) ~ model_data$`Fuel Type`, 
+        xlab = "Fuel Type", ylab = "Residuals", 
+        main = "Residuals by Fuel Type")
+
+# Boxplot of residuals by transmission
+boxplot(residuals(model_refined) ~ model_data$Transmission, 
+        xlab = "Transmission Type", ylab = "Residuals", 
+        main = "Residuals by Transmission Type")
+
+# Boxplot of residuals by mileage category
+boxplot(residuals(model_refined) ~ model_data$Mileage_bin, 
+        xlab = "Mileage Bin", ylab = "Residuals", 
+        main = "Residuals by Mileage Bin")
+
+# Boxplot of residuals grouped by Year Bin 
+boxplot(residuals(model_refined) ~ model_data$Year_bin, 
+        xlab = "Year Bin", ylab = "Residuals", 
+        main = "Residuals by Year Bin")
 
 # Testing for normality of residuals using Q-Q plot
 qqnorm(residuals(model_refined))
@@ -197,20 +256,19 @@ cat("Final Model Summary:\n")
 summary(model_refined)
 
 
+# Step 9: Finding Alternate Models and Performing Diagnostic Checking
 
+# Log Transformation of Response Model
+transformed_model <- lm(log_price ~ Kilometer + Year_bin + `Fuel Type` + Transmission + Seats, data = car_details_v3_clean)
+summary(transformed_model)
 
+# BP Test for Log-Transformed Model
+bptest(transformed_model)
 
+# QQ Plot for Log-Transformed Model
+qqnorm(residuals(transformed_model))
+qqline(residuals(transformed_model), col = "red")
 ```
-
-
-
-
-
-
-
-
-
-
 
 
 ## Methods
