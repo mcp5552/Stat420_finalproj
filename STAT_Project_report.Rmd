@@ -22,14 +22,29 @@ Max Piazza <br> David Orona <br> Nithya Arumugam <br> Abhitej Bokka
 </div>
 
 
+# Data Analysis Project: Modeling Used Car Prices
+
+
 ## Introduction
 
-This Vehicle dataset is available in kaggle [Vehicle Dataset from Cardekho- Cardetails Version3](https://www.kaggle.com/datasets/nehalbirla/vehicle-dataset-from-cardekho?select=Car+details+v3.csv).
+In an ever-volatile market where every dollar counts, the used car market represents a critical sector of the consumer industry. With rising consumer demand and an increasing variety of vehicles entering the secondary market, understanding the factors that influence used car prices is essential. Buyers seek to make informed decisions based on value for money, while sellers aim to maximize returns by accurately pricing their vehicles. Bridging this gap requires a data-driven approach to uncover the relationships between vehicle specifications and market pricing.
 
-The dataset contains the details of used cars.It includes various attributes like the car's make, manufacturing year, fuel efficiency, fuel type, transmission type, and more.
+This project utilizes the “Vehicle dataset” by Nehal Birla, Nishant Verma, and Nikhil Kushwaha, available on [Kaggle](https://www.kaggle.com/datasets/nehalbirla/vehicle-dataset-from-cardekho/data?select=Car+details+v3.csv)
 
-**Objective:**
-The goal is to analyze the dataset to identify key factors influencing the price of a used car and build a predictive model for estimating its cost. 
+This dataset aggregates detailed information on over 10,000 used cars, including key variables such as fuel type, transmission, engine capacity, mileage, and kilometers driven, alongside categorical variables like seller type, ownership history, and geographic location. 
+
+Our analysis is driven by three core objectives:
+
+* To model the relationship between vehicle specifications (e.g., mileage, transmission, and fuel type) and their pricing.
+* To identify regional trends and seller-specific factors influencing market prices.
+* To evaluate how performance metrics, such as engine power and fuel efficiency, impact purchasing behavior.
+
+<!-- Once we know what exactly what "statistal modeling techinques" we use, we can refer to them properly in this introduction, for now I just have "regression analysis"  -->
+
+Using statistical modeling techniques, including regression analysis, we aim to deliver a robust and interpretable model that not only predicts car prices but also highlights the most influential factors driving price variations. Our results will shed light on market dynamics, offering actionable insights for both consumers and industry professionals navigating this volatile space.
+
+By the conclusion of this project, we aim to provide a detailed analysis that enhances understanding of the used car market, aiding stakeholders in making informed decisions in an ever-changing economic landscape.
+
 
 The dataset contains the following attributes 
 
@@ -58,13 +73,22 @@ The above attributes can be categorized into Numeric and Categorical variables, 
 | Discrete Numeric Variables   | Year, Km Driven, Seats                            |
 | Continuous Numeric Variables | Selling Price, Mileage, Engine, Max Power, Torque |
 
-### Import dataset
-```{r message=FALSE}
+
+```{r include=FALSE}
+
+# Loading required R packages
 library(readr)
+library(stringr)
+library(car)
+library(lmtest)
+```
+
+### Load dataset
+```{r message=FALSE}
 car_details = read_csv("Car details v3.csv")
 ```
 
-### Total number of instances
+### Total number of observations
 ```{r}
 nrow(car_details)
 ```
@@ -99,9 +123,7 @@ head(car_details)
 
 ### Data cleaning
 ```{r}
-library(stringr)
-
-# Extract the first word from "name" 
+# Extract the first word from "name" - to get the "make" of the vehicle
 car_details$name = word(car_details$name,1)
 # Rename name to make
 colnames(car_details)[1] = "make"
@@ -123,14 +145,13 @@ car_details$max_power = word(car_details$max_power,1)
 #Change data_type of "max_power" from character to numeric
 car_details$max_power=as.numeric(car_details$max_power)
 
-# Change datatypes of "fuel", "seller_type", "transmission"	
+# Change datatypes of "fuel", "seller_type", "transmission","owner"	
 # From character to factor
 car_details$fuel=as.factor(car_details$fuel)
 car_details$seller_type=as.factor(car_details$seller_type)
 car_details$transmission=as.factor(car_details$transmission)
-
-# Encode numeric values for 1st/2nd/.. owner and convert to factor data type
 car_details$owner=as.factor(car_details$owner)
+#colnames(car_details)[7]="AM"
 
 ##KM driven in ten thousands
 car_details$km_driven = car_details$km_driven/10000
@@ -146,147 +167,202 @@ car_details$selling_price = car_details$selling_price/10000
 colnames(car_details)[3]="selling_price_in_10k"
 ```
 
-### Sample data
+#### Sample data
 ```{r}
 head(car_details)
 ```
 
-
-### Data analysis
-#### Number of cars in each make
-```{r echo=FALSE}
-make_counts = sort(table(car_details$make),decreasing = TRUE)
-make_counts_df = data.frame(make = names(make_counts), count = as.numeric(make_counts))
-make_counts_df
+#### Unique car brands
+```{r}
+unique(car_details$make)
 ```
 
-### Creating new varaible make_category
-
-- To reduce the model complexity and to increase interpretability, the car make can be grouped into broader categories as "Budget", "Mid-Range" or "Luxury" depending on general market perception
+#### Creating new varaible make_category
+- From the above result we can see that there are 31 unique values for "make".
+- When we model the data using the independent variable "make", there will be at least 30 dummy variables as predictors.
+- To reduce the model complexity and to increase interpretability, the car make can be grouped into broader categories as "Budget", "Mid-Range" or "Luxury" depending on general market perception.
 
 ```{r}
 car_details$make_category = ifelse(car_details$make %in% 
-                                     c("Maruti", "Hyundai", "Tata", "Mahindra", "Datsun", 
-                                        "Renault", "Chevrolet", "Fiat", "Kia", "Isuzu", 
-                                        "Force", "Daewoo", "Ambassador", "Ashok"), 
+                                     c("Maruti", "Tata", "Mahindra", "Datsun", 
+                                        "Renault", "Chevrolet", "Fiat", 
+                                         "Daewoo", "Ambassador", "Ashok"), 
                                     "Budget",
                              ifelse(car_details$make %in% 
-                                      c("Honda", "Ford", "Toyota", "Volkswagen", "Nissan", 
-                                        "Skoda", "Jeep", "Mitsubishi", "MG", "Land"), 
+                                      c("Honda", "Ford", "Hyundai","Toyota", "Volkswagen","Nissan", 
+                                        "Skoda", "Mitsubishi","Force", "Kia","MG"), 
                                     "Midrange", 
                                     "Luxury"))
 car_details$make_category = as.factor(car_details$make_category)
 levels(car_details$make_category)
 ```
-### Final structure of car_details 
+### Final structure of the dataset car_details 
 ```{r}
 structure_car_details = data.frame(
   Column = names(car_details),
-  Type = unname(sapply(car_details, class))
-)
-```
-
-### Structure of car_details
-```{r}
+  Type = unname(sapply(car_details, class)))
 print(structure_car_details)
+
 ```
 
+### Data analysis
+
 ```{r}
-barplot(sort(table(car_details$make)),horiz=TRUE,las=1,
-        xlab ="Number of cars",
+car_details$selling_price_in_10k[car_details$selling_price_in_10k > 720]
+car_details=subset(car_details,subset = car_details$selling_price_in_10k < 720,)
+```
+- There is one observation, which is quiet different from the general pattern of selling price. This can impact the model that we build, hence excluded one observation with selling_price = 1000. 
+
+#### Selling Price distribution
+```{r}
+hist(car_details$selling_price_in_10k,xlab="Selling Price (in Ten Thousands)",
+     main="Selling Price distribution",
+     col = "lightblue")
+```
+
+- The above plot is positively skewed, meaning the selling price for most of the observations are less than or equal to 200 and there are very less number of observations are above 20,00,000 INR. 
+
+
+
+### Frequency Distribution of categorical variables
+
+```{r}
+make_counts = table(car_details$make)
+fuel_type_car_count = table(car_details$fuel)
+seller_type_car_count = table(car_details$seller_type)
+trans_type_car_count = table(car_details$transmission)
+owner_type_car_count = table(car_details$owner)
+
+
+par(mfrow = c(2, 3))
+# Plot 1: Number of cars by make
+barplot(sort(make_counts),horiz=TRUE, las = 1,
+        xlab = "Number of Cars",
         ylab = "Car Make",
-        col=rainbow(length(unique(car_details$make))),
-        cex.names = 0.5,main="Num.of cars in each make")
+        col = "lightblue",
+        cex.names = 0.5,
+        main = "Num. of Cars in Each Make")
+
+# Plot 2: Number of cars by fuel type
+barplot(sort(fuel_type_car_count), horiz = TRUE, las = 1, cex.names = 0.9,
+        col = "lightblue", main = "Num. of Cars in Each Fuel Type")
+
+# Plot 3: Number of cars by seller type
+barplot(sort(seller_type_car_count), horiz = TRUE, las = 1, cex.names = 0.8,
+        col = "lightblue", main = "Num. of Cars in Each Seller Type")
+
+# Plot 4: Number of cars by trans type
+barplot(sort(trans_type_car_count), horiz = TRUE, las = 1, cex.names = 0.8,
+        col = "lightblue", main = "Num. of Cars in Each Trans Type")
+
+# Plot 5: Number of cars by owner type
+barplot(sort(owner_type_car_count), horiz = TRUE, las = 1, cex.names = 0.6,
+        col = "lightblue", main = "Num. of Cars in Each Owner Type")
 ```
 
+### Box-plots of categorical varaibles vs selling price 
 
-### Selling Price distribution
-```{r}
-hist(car_details$selling_price_in_10k,xlab="Selling Price (in Ten Thousands)",main="Selling Price distribution")
-```
-
-### Selling Price based on make
+#### Selling Price based on make
 ```{r}
 boxplot(selling_price_in_10k ~ make, data = car_details,col=rainbow(length(unique(car_details$make))),
         las = 2,cex.axis = 0.7,               
-        main = "Selling Price by Make",
+        main = "Car Make Vs Selling Price",
         xlab = "Car Make",
         ylab = "Selling Price (in 10k)")
 ```
 
-```{r echo=FALSE}
-par(mfrow = c(2, 2))
-fuel_type_car_count = table(car_details$fuel)
-seller_type_car_count = table(car_details$seller_type)
+- The above boxplot indicates a significant variation in selling prices across different car makes. Some brands have a much wider price range than others. 
+- Example Mercedes-Benz, BMW, Jaguar,Land Rover and Volvo have the highest median selling prices. 
+- While cars like Tata, Maruti, and Daewoo have the lowest median selling prices
 
-barplot(sort(fuel_type_car_count),horiz=TRUE,las=1,cex.names = 0.9,
-        main="Num.of cars in each fuel type")
-barplot(sort(seller_type_car_count),horiz=TRUE,las=1,cex.names = 0.8,
-        main="Num.of cars in each seller_type")
-trans_type_car_count = table(car_details$transmission)
-owner_type_car_count = table(car_details$owner)
-barplot(sort(trans_type_car_count),horiz=TRUE,las=1,cex.names = 0.8,
-        main="Num.of cars in each transmission type")
-barplot(sort(owner_type_car_count),horiz=TRUE,las=1,cex.names = 0.6,
-        main="Num.of cars in each owner type")
-fuel_type_car_count
-seller_type_car_count
-trans_type_car_count
-owner_type_car_count
-```
-
-```{r echo=FALSE}
+```{r}
 par(mfrow = c(1, 2))
 boxplot(selling_price_in_10k ~ fuel, data=car_details,cex.axis = 0.8,
+        col=rainbow(length(unique(car_details$fuel))),
      main="SellingPrice based on fuel type")
 plot(selling_price_in_10k ~ seller_type, data=car_details,cex.axis = 0.6,
+     col=rainbow(length(unique(car_details$seller_type))),
      main="SellingPrice based on seller type")
+```
+
+- Diesel powered cars have highest median selling price followed by petrol powered and CNG or LPG cars.
+- The Individual seller type cars have lowest median cost compared to Dealers.
+
+```{r}
 par(mfrow = c(1, 2))
 plot(selling_price_in_10k ~ transmission, data=car_details,
+     col=rainbow(length(unique(car_details$transmission))),
      main="SellingPrice based on trans. type")
 plot(selling_price_in_10k ~ owner, data=car_details,las=2,cex.axis = 0.5,
+     col=rainbow(length(unique(car_details$owner))),
      main="SellingPrice based on owner type")
 ```
 
+- We can see that there is a slight difference in the selling price of the Automatic and Manual transmission cars. The median cost of Automatic transmission cars are higher than Manual transmission cars. 
+- The selling price of cars across different owner types are significantly different. The median price of test drive cars are very high and the rest of the owner types have low median cost
 
-
-### Selling Price based on year with Transmission Type
+### Scatter plot of numerical varaibles vs selling price
 
 ```{r}
 colours = ifelse(car_details$transmission == "Automatic", "blue", "red")
 plot(selling_price_in_10k ~ year,data=car_details,col=colours,pch=19,
-     main = "Selling Price by Year with Transmission Type",
+     main = "Selling Price based on Year (with Transmission Type)",
      xlab = "Year",
      ylab = "Selling Price (in Ten Thousands)")
 legend("topleft", legend = c("Automatic", "Manual"),
        col = c("blue", "red"), pch = 19)
 ```
 
-### Selling Price based on year with Owner Type
+- We can see a **positive correlation between year and selling price.** As the year increases, the selling price is increasing. 
+- This suggests that newer cars are priced higher than older ones.
+- We can also see that **automatic transmission cars have a higher selling price across all years.** 
+
 
 ```{r}
-colours = ifelse(car_details$owner == "First Owner", "red",
-          ifelse(car_details$owner == "Second Owner", "blue",
-          ifelse(car_details$owner == "Third Owner", "green",
-          ifelse(car_details$owner == "Fourth & Above Owner", "orange", 
-          "yellow"))))
-plot(selling_price_in_10k ~ year,data=car_details,col=colours,pch=19,
-     main = "Selling Price by Year with Owner Categories",
+colours = c("Budget" = "blue", "Midrange"="green","Luxury"= "orange")
+plot(selling_price_in_10k ~ year,data=car_details,
+     col = colours[car_details$make_category],pch=19,
+     main = "Selling Price based on Year (with make_category)",
      xlab = "Year",
      ylab = "Selling Price (in Ten Thousands)")
-
-legend("topleft", legend = c("First Owner","Second Owner","Third Owner","Fourth & Above Owner","Test Drive Car"),
-       col = c("red", "blue", "green", "orange", "yellow"), pch = 19)
+legend("topleft", legend = c("Budget","Midrange","Luxury"),
+       col = c("blue", "green","orange"), pch = 19)
 ```
+
+- Similar to previous plot, there is a positive correlation between year and selling price.
+- We see that **cost of Budget cars, mid range cars and luxury car increases with Year.**
+
+```{r}
+par(mfrow = c(1, 2))
+plot(selling_price_in_10k ~ km_driven_in_10k, data=car_details,
+     xlab="KM_Driven((in Ten Thousand)",
+     ylab="Selling_Price(in Ten Thousand)",
+     main="Price based on km_driven")
+car_details = subset(car_details,car_details$km_driven_in_10k < 100,)
+plot(selling_price_in_10k ~ km_driven_in_10k, data=car_details,
+     xlab="KM_Driven((in Ten Thousand)",
+     ylab="Selling_Price(in Ten Thousand)",
+     main="After removing extreme values")
+```
+
+- The relationship between selling_price and km_driven doesn't seem to be strongly linear
+- But we can see that **as the km_driven increases, the selling price remains in low range.** 
+- There are 2 observations which are different from the general pattern with values of KM Driven(150.0000 236.0457). This can been seen in the above plot left side.
+- These observations can impact the model. Hence those two data points are excluded.
+
+
+```{r}
+plot(selling_price_in_10k ~ mileage, data=car_details,
+     xlab="Mileage",
+     ylab="Selling_Price(in Ten Thousand)",
+     main="Price based on Mileage")
+```
+
+- Most data points are clustered at mileage values 10 to 30, and there doesn't seem to be a linear relationship.
+- That is **higher mileage doesn't indicate higher selling price.**
 
 
 ```{r echo=FALSE}
-par(mfrow = c(1, 2))
-plot(selling_price_in_10k ~ km_driven_in_10k, data=car_details,
-     main="Price based on km_driven")
-plot(selling_price_in_10k ~ mileage, data=car_details,
-     main="Price based on Mileage")
-
 par(mfrow = c(1, 2))
 plot(selling_price_in_10k ~ engine, data=car_details,
      main="Price based on engine")
@@ -294,17 +370,46 @@ plot(selling_price_in_10k ~ max_power, data=car_details,
      main="Price based on max_power")
 ```
 
-### Correlation of the numeric variables in vehicle dataset
+- From the "Price based on engine" plot, we can see that the **selling price is high for higher engine power**
+- From the "Price based on max_power" plot, we can see that the there is a linear relationship between max_power and selling price.
+- **When the maximum power increases, the selling price of the car is increasing**
+
+```{r echo=FALSE}
+colours = c("Petrol" = "blue", "Diesel"="green","CNG"= "orange","LPG"="red")
+plot(selling_price_in_10k ~ max_power, data=car_details,
+     col=colours[car_details$fuel],
+     main="Price based on max_power")
+legend("topleft", legend = c("Petrol","Diesel","CNG","LPG"),
+       col = c("blue", "green","orange","red"), pch = 19)
+```
+
+
+#### Conclusion of Data analysis
+
+- The selling price distribution is positively skewed. Positively skewed data has extreme values which makes it hard to fit models. 
+- Hence Logarithmic transformation can make the selling price distribution to be normally distributed. 
+- Logarithmic transformations can also help stabilize the variance, making the data more homoscedastic and suitable for analysis.
+- There is a positive correlation between year and selling price.
+- Cost of Budget cars, mid range cars and luxury car increases with Year.
+- As the km_driven increases, the selling price tends to decrease.
+- There is no impact of mileage on selling price
+- The engine and max_power also tends to increase with selling price.
+- The median cost of Automatic transmission cars are higher than Manual transmission cars.
+- The median price of test drive cars are very high when compared to other owner types
+
+
+#### Correlation of the numeric variables
 ```{r}
 pairs(selling_price_in_10k ~ year+km_driven_in_10k+mileage+engine+max_power+seats ,data=car_details)
 cor_mat = cor(car_details[,sapply(car_details,is.numeric)])
 cor_mat
-high_correlation = cor_mat[cor_mat > 0.5 & cor_mat != 1]
+high_cor = cor_mat[cor_mat > 0.5 & cor_mat != 1]
 high_cor_indices = which(cor_mat > 0.5 & cor_mat != 1, arr.ind = TRUE)
-data.frame(
+high_cor_df = data.frame(
   row = rownames(cor_mat)[high_cor_indices[, 1]],
   column = colnames(cor_mat)[high_cor_indices[, 2]],
-  correlation = high_correlation)
+  correlation = high_cor)
+head(high_cor_df, 3)
 ```
 
 ### Split data into train and test
@@ -317,41 +422,67 @@ nrow(train_data)
 nrow(test_data)
 ```
 
+### Additive Full model without "Make"
 
 ```{r}
-price_int_model = lm(selling_price_in_10k ~ make_category*year*max_power*transmission + owner + seller_type + km_driven_in_10k, data=train_data)
-summary(price_int_model)
-plot(price_int_model,which=1)
+full_model = lm(selling_price_in_10k ~ .-make, data = train_data)
+summary(full_model)
+par(mfrow = c(1, 2))
+plot(full_model,which=c(1,2))
+vif(full_model)
 ```
 
-### BIC backward interaction model
+### BIC of Full model | Both direction 
 ```{r}
 n= nrow(train_data)
-bic_model_int = step(price_int_model,direction="backward",k=log(n),trace=0)
-summary(bic_model_int)
-plot(bic_model_int,which=1)
+bic_full_model = step(full_model,direction="both",k=log(n),trace=0)
+summary(bic_full_model)
+plot(bic_full_model,which=c(1,2))
+vif(bic_full_model)
 ```
 
-### Influential points1
+### Small model with interaction
 ```{r}
-indicies_to_exclude = unname(which(cooks.distance(bic_model_int) > 4/length(cooks.distance(bic_model_int))))
-sum(cooks.distance(bic_model_int) > 4/length(cooks.distance(bic_model_int)))
+small_model = lm(selling_price_in_10k ~ make_category*year*max_power + year*transmission + owner + seller_type + km_driven_in_10k+mileage, data = train_data)
+summary(small_model)
+plot(small_model,which=c(1,2))
+vif(small_model,type = "predictor")
+```
+
+### BIC of Small model | Both direction 
+```{r}
+n= nrow(train_data)
+bic_small_model = step(small_model,direction="both",k=log(n),trace=0)
+summary(bic_small_model)
+plot(bic_small_model,which=c(1,2))
+vif(small_model,type = "predictor")
+bptest(bic_small_model)
+
+```
+
+### ANOVA of BIC Small model and BIC Full model
+```{r}
+anova(bic_small_model,bic_full_model)
+```
+
+### Influential points
+```{r}
+indicies_to_exclude = unname(which(cooks.distance(bic_small_model) > 4/length(cooks.distance(bic_small_model))))
+sum(cooks.distance(bic_small_model) > 4/length(cooks.distance(bic_small_model)))
 train_data_filtered = train_data[-indicies_to_exclude,]
 ```
 
-### Refitting the model without influential points
+### Refitting the BIC Small model without influential points
 ```{r}
-#price_int_model = lm(selling_price_in_10k ~ make_category*year*max_power*transmission + owner + seller_type + km_driven_in_10k, data=train_data_filtered)
-#summary(price_int_model)
-#plot(price_int_model,which=1)
-```
-
-### BIC backward interaction model(without infuential data)
-```{r}
-#n= nrow(train_data_filtered)
-#bic_model_int = step(price_int_model,direction="backward",k=log(n),trace=0)
-#summary(bic_model_int)
-#plot(bic_model_int,which=1)
+n= nrow(train_data_filtered)
+refitted_wip = lm(log(selling_price_in_10k) ~ .+ make_category*year+ make_category*max_power -make-seats-engine, data = train_data_filtered)
+                    #make_category*year*max_power + transmission + owner + seller_type + km_driven_in_10k+mileage, data = train_data_filtered)
+summary(refitted_wip)
+bic_refitted_wip = step(refitted_wip,direction="both",k=log(n),trace=0)
+summary(bic_refitted_wip)
+vif(bic_refitted_wip,type = "predictor")
+plot(bic_refitted_wip,which=c(1,2))
+bptest(bic_refitted_wip)
 ```
 
 
