@@ -29,7 +29,7 @@ Max Piazza <br> David Orona <br> Nithya Arumugam <br> Abhitej Bokka
 
 In an ever-volatile market where every dollar counts, the used car market represents a critical sector of the consumer industry. With rising consumer demand and an increasing variety of vehicles entering the secondary market, understanding the factors that influence used car prices is essential. Buyers seek to make informed decisions based on value for money, while sellers aim to maximize returns by accurately pricing their vehicles. Bridging this gap requires a data-driven approach to uncover the relationships between vehicle specifications and market pricing.
 
-This project utilizes the “Vehicle dataset” by Nehal Birla, Nishant Verma, and Nikhil Kushwaha, available on [Kaggle](https://www.kaggle.com/datasets/nehalbirla/vehicle-dataset-from-cardekho/data?select=Car+details+v3.csv)
+This project utilizes the “Vehicle dataset” by Nehal Birla, Nishant Verma, and Nikhil Kushwaha, available on Kaggle at [https://www.kaggle.com/datasets/nehalbirla/vehicle-dataset-from-cardekho/data?select=Car+details+v3.csv](https://www.kaggle.com/datasets/nehalbirla/vehicle-dataset-from-cardekho/data?select=Car+details+v3.csv).
 
 This dataset aggregates detailed information on over 10,000 used cars, including key variables such as fuel type, transmission, engine capacity, mileage, and kilometers driven, alongside categorical variables like seller type, ownership history, and geographic location. 
 
@@ -39,48 +39,52 @@ Our analysis is driven by three core objectives:
 * To identify regional trends and seller-specific factors influencing market prices.
 * To evaluate how performance metrics, such as engine power and fuel efficiency, impact purchasing behavior.
 
-<!-- Once we know what exactly what "statistal modeling techinques" we use, we can refer to them properly in this introduction, for now I just have "regression analysis"  -->
+<!-- Once we know what exactly what "statistical modeling techniques" we use, we can refer to them properly in this introduction, for now I just have "regression analysis"  -->
 
 Using statistical modeling techniques, including regression analysis, we aim to deliver a robust and interpretable model that not only predicts car prices but also highlights the most influential factors driving price variations. Our results will shed light on market dynamics, offering actionable insights for both consumers and industry professionals navigating this volatile space.
 
 By the conclusion of this project, we aim to provide a detailed analysis that enhances understanding of the used car market, aiding stakeholders in making informed decisions in an ever-changing economic landscape.
 
 
-The dataset contains the following attributes 
+The dataset contains the following attributes: 
 
-|    | Attributes       | Description                                                                        |
+|    | Attribute Name       | Description                                                                        |
 |----|------------------|------------------------------------------------------------------------------------|
-| 1  |   Name           |   The brand name of the vehicle (e.g., Hyundai i10, Honda City).                   |
-| 2  |   Year           |   The year the vehicle was manufactured.                                           |
-| 3  |   Selling Price  |   The selling price of the vehicle in INR.                                               |
-| 4  |   Km Driven      |   The total distance the vehicle has been driven.                                  |
-| 5  |   Fuel           |   The type of fuel used by the vehicle (e.g Petrol, Diesel)                        |
-| 6  |   Seller Type    |   The type of seller (e.g Individual, Dealer).                                     |
-| 7  |   Transmission   |   The type of transmission system (e.g Manual, Automatic).                         |
-| 8  |   Owner          |   The number of previous owners of the vehicle (e.g., First Owner, Second Owner).  |
-| 9  |   Mileage        |   The fuel efficiency of the vehicle.(in km/l or km/kg)                            |
-| 10 |   Engine         |   The engine displacement capacity.(in CC)                                         |
-| 11 |   Max Power      |   The maximum power output of the vehicle’s engine measured in horsepower.(in HP). |
-| 12 |   Torque         |   The maximum torque.                                                              |
-| 13 |   Seats          |   The seating capacity of the vehicle (e.g 5-seater, 7-seater).                    |
+| 1  |   `name`           |   The make and model of the vehicle (e.g., Hyundai i10, Honda City).                   |
+| 2  |   `year`           |   The year the vehicle was manufactured.                                           |
+| 3  |   `selling_price`  |   The selling price of the vehicle in Indian Rupees (INR).                                               |
+| 4  |   `km_driven`      |   The total distance the vehicle has been driven (in km).                                  |
+| 5  |   `fuel`           |   The type of fuel used by the vehicle ("Diesel", "Petrol", "LPG", or "CNG").                        |
+| 6  |   `seller_type`    |   The type of seller ("Individual", "Dealer" or "Trustmark Dealer").                                     |
+| 7  |   `transmission`   |   The type of transmission system ("Manual" or "Automatic").                         |
+| 8  |   `owner`          |   The number of previous owners of the vehicle ("First Owner", "Second Owner", "Third Owner", "Fourth and Above Owner", or "Test Drive Car").  |
+| 9  |   `mileage`        |   The fuel efficiency of the vehicle (in km/l or km/kg).                           |
+| 10 |   `engine`         |   The engine displacement capacity (in CC).                                         |
+| 11 |   `max_power`      |   The maximum power output of the vehicle’s engine, measured in brake horsepower (bhp).|
+| 12 |   `torque`         |   A pair of torque and RPM values representing the max torque of the vehicle. The torque values are in either Nm or kgm, and the RPM values are either values or value ranges.                                                              |
+| 13 |   `seats`          |   The seating capacity of the vehicle as an integer.                   |
 |    |                  |                                                                                    |
 
-The above attributes can be categorized into Numeric and Categorical variables, with **selling price as continuous numeric response variable.**
+The above attributes can be categorized into numeric and categorical variables. Numeric variables can be separated into discrete and continuous variables. 
 
-| Attribute Type               | Attribute                                         |
+| Attribute Type               | Attribute Name                                    |
 |------------------------------|---------------------------------------------------|
-| Categorical Variables        | Name, Fuel, Seller Type, Transmission, Owner      |
-| Discrete Numeric Variables   | Year, Km Driven, Seats                            |
-| Continuous Numeric Variables | Selling Price, Mileage, Engine, Max Power, Torque |
+| Categorical Variables        | `name`, `fuel`, `seller_type`, `transmission`, `owner`      |
+| Discrete Numeric Variables   | `year`, `km_driven`, `seats`                            |
+| Continuous Numeric Variables | `selling_price`, `mileage`, `engine`, `max_power`, `torque` |
 
-
+## Methods 
 ```{r include=FALSE}
-
-# Loading required R packages
+# Load required R packages
 library(readr)
 library(stringr)
 library(car)
 library(lmtest)
+```
+
+```{r}
+# Set document-wide options 
+options(tibble.width = Inf)  # Make tibbles display all columns
 ```
 
 ### Load dataset
@@ -93,7 +97,13 @@ car_details = read_csv("Car details v3.csv")
 nrow(car_details)
 ```
 
-### Excluding missing values from dataset
+### Sample of data from Vehicle dataset
+```{r}
+head(car_details)
+```
+
+### Data cleaning
+#### Excluding missing values from dataset
 ```{r eval=FALSE, include=FALSE}
 col_name=""
 for(col_name in names(car_details))
@@ -110,79 +120,120 @@ car_details = na.omit(car_details)
 nrow(car_details)
 ```
 
-### Excluding duplicate rows from dataset
+#### Excluding duplicate rows from dataset
 ```{r}
 sum(duplicated(car_details))
 car_details = car_details[!duplicated(car_details),]
 nrow(car_details)
 ```
-### Sample data from Vehicle's dataset
-```{r}
-head(car_details)
-```
 
-### Data cleaning
+#### Transforming ```name``` variable
 ```{r}
-# Extract the first word from "name" - to get the "make" of the vehicle
+# Extract the first word from "name" to get the make of the vehicle
 car_details$name = word(car_details$name,1)
-# Rename name to make
+# Rename "name" variable to "make"
 colnames(car_details)[1] = "make"
 # Change datatypes of "make" from character to factor
 car_details$make = as.factor(car_details$make)
+```
 
-# Extract the numeric value from mileage
+#### Transforming ```mileage``` variable
+```{r}
+# View raw data for "mileage" variable
+head(car_details$mileage, n=20)
+# Drop 86 rows where "mileage" value contains the text "km/kg"
+car_details <- car_details[!grepl("km/kg", car_details$mileage), ]
+# Extract the numeric value from "mileage" 
 car_details$mileage = word(car_details$mileage,1)
-#Change data_type of "mileage" from character to numeric
+# Change data_type of "mileage" from character to numeric
 car_details$mileage=as.numeric(car_details$mileage)
+# View new data for "mileage" variable
+head(car_details$mileage, n=20)
+```
 
-# Extract the numeric value from engine
+#### Transforming ```engine``` variable
+```{r}
+# View raw data for "engine" variable
+head(car_details$engine, n=20)
+# Extract the numeric value from each entry (remove the text "CC" from the end of each entry)
 car_details$engine = word(car_details$engine,1)
-#Change data_type of "engine" from character to numeric
+# Change data_type of "engine" from character to numeric
 car_details$engine=as.numeric(car_details$engine)
+# View new data for "engine" variable
+head(car_details$engine, n=20)
+```
 
-# Extract the numeric value from max_power
+#### Transforming ```max_power``` variable
+```{r}
+# Transform "max_power" variable
+# View raw data for "max_power" variable
+head(car_details$max_power, n=20)
+# Extract the numeric value from each entry of "max_power" (remove the text "bhp" from the end of each entry)
 car_details$max_power = word(car_details$max_power,1)
-#Change data_type of "max_power" from character to numeric
+# Change data_type of "max_power" from character to numeric
 car_details$max_power=as.numeric(car_details$max_power)
+# View new data for "max_power" variable
+head(car_details$max_power, n=20)
+```
 
-# Change datatypes of "fuel", "seller_type", "transmission","owner"	
-# From character to factor
+#### Converting character-typed columns to factor type
+```{r}
+# Change datatypes of "fuel", "seller_type", "transmission", and "owner"
+# from character to factor 
 car_details$fuel=as.factor(car_details$fuel)
 car_details$seller_type=as.factor(car_details$seller_type)
 car_details$transmission=as.factor(car_details$transmission)
 car_details$owner=as.factor(car_details$owner)
+
+# The code below renames the "seller_type" variable to "AM", but it was commented out. It causes the document to fail knitting if included. Delete this code? 
 #colnames(car_details)[7]="AM"
-
-##KM driven in ten thousands
-car_details$km_driven = car_details$km_driven/10000
-#Rename  km_driven
-colnames(car_details)[4]="km_driven_in_10k"
-
-#Dropping column torque
-car_details = car_details[,!names(car_details) %in% "torque"]
-
-#Selling price in ten thousands
-car_details$selling_price = car_details$selling_price/10000
-#Rename Selling price
-colnames(car_details)[3]="selling_price_in_10k"
 ```
 
-#### Sample data
+#### Converting ```km_driven``` to ```km_driven_in_10k```
 ```{r}
-head(car_details)
+# Modify the "km_driven" column by dividing the values of each entry by 10,000 and renaming the column to "km_driven_in_10k" 
+car_details$km_driven = car_details$km_driven/10000
+# Rename km_driven
+colnames(car_details)[4]="km_driven_in_10k"
+# View data for "km_driven_in_10k" column
+head(car_details)[4]
 ```
 
-#### Unique car brands
+#### Converting ```selling_price``` to ```selling_price_in_10k```
+```{r}
+# Modify "selling_price" column by dividing the values of each entry by 10,000 and renaming the column to "selling_price_in_10k"
+car_details$selling_price = car_details$selling_price/10000
+# Rename selling_price to "selling_price_in_10k"
+colnames(car_details)[3]="selling_price_in_10k"
+# View data for "selling_price_in_10k" column
+head(car_details)[3]
+
+```
+
+#### Dropping ```torque``` column
+```{r}
+# Drop "torque" column
+car_details = car_details[,!names(car_details) %in% "torque"]
+```
+
+#### Creating ```make_category``` variable from ```make``` variable
 ```{r}
 unique(car_details$make)
 ```
 
-#### Creating new varaible make_category
 - From the above result we can see that there are 31 unique values for "make".
 - When we model the data using the independent variable "make", there will be at least 30 dummy variables as predictors.
 - To reduce the model complexity and to increase interpretability, the car make can be grouped into broader categories as "Budget", "Mid-Range" or "Luxury" depending on general market perception.
 
+<!-- By the code below: 
+"Budget" cars are Maruti, Tata, Mahindra, Datsun, Renault, Chevrolet, Fiat, Daewoo, Ambassador, and Ashok.
+"Midrange" cars are Honda, Ford, Hyundai, Toyota, Volkswagen, Nissan, Skoda, Mitsubishi, Force, Kia, and MG.
+"Luxury" cars are Jeep, Mercedes-Benz, Audi, BMW, Lexus, Jaguar, Land, Volvo, Isuzu, and Opel. 
+
+There could be some potential errors. For example, Jeeps and Opels are not normally luxury. Chevrolet could be luxury (e.g. Corvette). -->
+
 ```{r}
+# Create new column "make_category" from "make" column
 car_details$make_category = ifelse(car_details$make %in% 
                                      c("Maruti", "Tata", "Mahindra", "Datsun", 
                                         "Renault", "Chevrolet", "Fiat", 
@@ -196,17 +247,21 @@ car_details$make_category = ifelse(car_details$make %in%
 car_details$make_category = as.factor(car_details$make_category)
 levels(car_details$make_category)
 ```
-### Final structure of the dataset car_details 
+
+#### Sample of dataset after cleaning
+```{r}
+head(car_details)
+```
+
+#### Final structure of the ```car_details``` dataset 
 ```{r}
 structure_car_details = data.frame(
   Column = names(car_details),
   Type = unname(sapply(car_details, class)))
 print(structure_car_details)
-
 ```
 
-### Data analysis
-
+### Data Analysis
 ```{r}
 car_details$selling_price_in_10k[car_details$selling_price_in_10k > 720]
 car_details=subset(car_details,subset = car_details$selling_price_in_10k < 720,)
@@ -224,8 +279,7 @@ hist(car_details$selling_price_in_10k,xlab="Selling Price (in Ten Thousands)",
 
 
 
-### Frequency Distribution of categorical variables
-
+#### Frequency Distribution of categorical variables
 ```{r}
 make_counts = table(car_details$make)
 fuel_type_car_count = table(car_details$fuel)
@@ -260,7 +314,7 @@ barplot(sort(owner_type_car_count), horiz = TRUE, las = 1, cex.names = 0.6,
         col = "lightblue", main = "Num. of Cars in Each Owner Type")
 ```
 
-### Box-plots of categorical varaibles vs selling price 
+### Box-plots of categorical variables vs selling price. 
 
 #### Selling Price based on make
 ```{r}
@@ -484,5 +538,11 @@ vif(bic_refitted_wip,type = "predictor")
 plot(bic_refitted_wip,which=c(1,2))
 bptest(bic_refitted_wip)
 ```
+
+## Results
+
+## Discussion
+
+## Appendix
 
 
