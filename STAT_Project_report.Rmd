@@ -516,30 +516,34 @@ legend("topleft", legend = c("Petrol","Diesel"),
 - Prices of diesel cars are generally high. But prices of petrol cars with high horsepower are also high.
 
 
-#### Analysis of Correlation Between Numeric variables
+#### Analysis of Correlation Between Numeric Variables
 ```{r}
 # Pairs plot for numeric variables
-pairs(selling_price_in_10k ~ year+km_driven_in_10k+fuel_efficiency+engine+max_power+seats ,data=car_details)
+pairs(selling_price_in_10k ~ year + km_driven_in_10k + fuel_efficiency + engine + max_power + seats, data = car_details)
 
 # Calculate correlation matrix for numeric variables
-cor_mat = cor(car_details[,sapply(car_details,is.numeric)])
+cor_mat = cor(car_details[, sapply(car_details, is.numeric)])
 cor_mat
 
-# Extract high correlation values 
-high_cor = cor_mat[cor_mat > 0.5 & cor_mat != 1]
-high_cor_indices = which(cor_mat > 0.5 & cor_mat != 1, arr.ind = TRUE)
+# Extract high correlation values from the upper triangle of the correlation 
+# matrix (to remove redundant correlations caused by symmetry)
+high_cor_indices = which(upper.tri(cor_mat) & cor_mat > 0.5, arr.ind = TRUE)
+
+# Create table for high-correlation variables
 high_cor_df = data.frame(
   row = rownames(cor_mat)[high_cor_indices[, 1]],
   column = colnames(cor_mat)[high_cor_indices[, 2]],
-  correlation = high_cor)
+  correlation = cor_mat[high_cor_indices]
+)
 
-# Display first few pairs of high-correlation variables
-head(high_cor_df, 6)
+# Display the first few entries in the table
+head(high_cor_df)
 ```
 
-- From the correlation plot and correlation matrix we can see that, following combination of fields have correlation above 0.5
-- (max_power and selling_price) has high correlation of 0.6872307. Hence selling price increase with max_power
-- (max_power and engine) has high correlation of 0.6863027. Hence max power and engine are correlated predictors
+- From the above table of high-correlation variable pairs, we can see that the following variable pairs have correlations above 0.5:
+  - ```max_power``` and ```selling_price``` have a high correlation of 0.6872307. Hence, selling price increases with max power.
+  - ```max_power``` and ```engine``` have a high correlation of 0.6863027. This indicates that higher-displacement engines tend to be more powerful. 
+  - ```seats``` and ```engine``` have high a correlation of 0.6631. This indicates that vehicles with more seats tend to have larger engines.
 
 ### Model Development and Validation
 
