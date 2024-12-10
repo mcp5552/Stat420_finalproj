@@ -189,9 +189,6 @@ car_details$fuel=as.factor(car_details$fuel)
 car_details$seller_type=as.factor(car_details$seller_type)
 car_details$transmission=as.factor(car_details$transmission)
 car_details$owner=as.factor(car_details$owner)
-
-# The code below renames the "seller_type" variable to "AM", but it was commented out. It causes the document to fail knitting if included. Delete this code? 
-#colnames(car_details)[7]="AM"
 ```
 
 #### Converting ```km_driven``` to ```km_driven_in_10k```
@@ -288,7 +285,7 @@ car_details=subset(car_details,subset = car_details$selling_price_in_10k < 720,)
 ##### Selling Price distribution
 ```{r}
 # Histogram of selling prices 
-hist(car_details$selling_price_in_10k,xlab="Selling Price (10,000 INR)",
+hist(car_details$selling_price_in_10k,xlab="Selling Price (in 10,000 INR)",
      main="Selling Price distribution",
      breaks = 30, 
      col = "lightblue")
@@ -315,19 +312,19 @@ barplot(sort(make_counts),horiz=TRUE, las = 1,
 
 # Plot 2: Number of cars by fuel type
 barplot(sort(fuel_type_car_count), horiz = TRUE, las = 1, cex.names = 0.9,
-        col = "lightblue", main = "Num. of Cars in Each Fuel Type")
+        xlab = "Number of Cars",col = "lightblue", main = "Num. of Cars in Each Fuel Type")
 
 # Plot 3: Number of cars by seller type
 barplot(sort(seller_type_car_count), horiz = TRUE, las = 1, cex.names = 0.8,
-        col = "lightblue", main = "Num. of Cars in Each Seller Type")
+        xlab = "Number of Cars",col = "lightblue", main = "Num. of Cars in Each Seller Type")
 
 # Plot 4: Number of cars by transmission type
 barplot(sort(trans_type_car_count), horiz = TRUE, las = 1, cex.names = 0.8,
-        col = "lightblue", main = "Num. of Cars in Each Trans Type")
+        xlab = "Number of Cars",col = "lightblue", main = "Num. of Cars in Each Trans Type")
 
 # Plot 5: Number of cars by owner type
 barplot(sort(owner_type_car_count), horiz = TRUE, las = 1, cex.names = 0.6,
-        col = "lightblue", main = "Num. of Cars in Each Owner Type")
+        xlab = "Number of Cars",col = "lightblue", main = "Num. of Cars in Each Owner Type")
 ```
 
 ##### Boxplots of Selling Price by Different Categorical Variables
@@ -353,9 +350,8 @@ boxplot(selling_price_in_10k ~ fuel, data = car_details, cex.axis = 0.8,
         main = "Box Plot of Selling Price by Fuel Type",
         xlab = "Fuel Type", ylab = "Selling Price (10,000 INR)")
 ```
-<!-- Need some commentary about this plot -->
 
-- Insert description here
+- From the above boxplot we can see that the median selling price of Diesel cars are slightly higher than the median selling price of Petrol cars.
 
 ###### Selling Price by Seller Type
 ```{r}
@@ -366,8 +362,7 @@ boxplot(selling_price_in_10k ~ seller_type, data = car_details, cex.axis = 0.6,
         xlab = "Seller Type", ylab = "Selling Price (10,000 INR)")
 ```
 
-- Diesel-powered cars have highest median selling price followed by petrol powered and CNG or LPG cars.
-- The Individual seller type cars have the lowest median cost.
+- The cars sold by Individuals have the lowest median cost when compared to cars sold by dealers.
  
 ###### Selling Price by Transmission Type
 ```{r}
@@ -379,7 +374,7 @@ plot(selling_price_in_10k ~ transmission, data = car_details,
      ylab = "Selling Price (10,000 INR)")
 ```
 
-- We can see that there is a slight difference in the selling price of the Automatic and Manual transmission cars. The median cost of Automatic transmission cars is higher than that of Manual transmission cars. 
+- We can see that there is a difference in the selling price of the Automatic and Manual transmission cars. The cost range of Automatic transmission cars is higher than that of Manual transmission cars. 
 
 ###### Selling Price by Owner Type
 ```{r}
@@ -391,7 +386,9 @@ plot(selling_price_in_10k ~ owner, data = car_details, las = 2, cex.axis = 0.5,
      ylab = "Selling Price (10,000 INR)")
 ```
 
-- The selling prices of cars across different owner types are significantly different. The median price of test drive cars are very high and the rest of the owner types have low median cost
+- The selling prices of cars across different owner types are significantly different. 
+- The median price of test drive cars are very high and the rest of the owner types have low median cost
+- The median selling price is in the decreasing order of First Owner, Second Owner, Third Owner, Fourth & above Owner.
 
 
 #### Scatter Plots of Selling Price vs Different Numerical Variables
@@ -451,6 +448,10 @@ plot(selling_price_in_10k ~ km_driven_in_10k, data=car_details,
 - These observations can impact the model. Hence those two data points are excluded from the second plot.
 
 ```{r}
+
+# Subset out 15 observations with fuel_efficiency=0 
+car_details = subset(car_details, car_details$fuel_efficiency!=0,)
+
 # Scatter plot of selling price vs fuel efficiency
 plot(selling_price_in_10k ~ fuel_efficiency, data=car_details,
      xlab="Fuel Efficiency (km/l)",
@@ -472,45 +473,37 @@ plot(selling_price_in_10k ~ engine, data=car_details,
 
 - From the above plot, we can see that the **selling price is high for higher values of engine power**
 
+
 ```{r}
-# Scatter plot of selling price vs max power
-plot(selling_price_in_10k ~ max_power, data=car_details,
-     main="Selling Price vs Max Power",
-     ylab="Selling Price (10,000 INR)",
-     xlab="Max Power (bhp)"
-     )
-```
-
-- From the above plot, we can see that the there is a linear relationship between max power and selling price.
-- We can conclude that **when the maximum power increases, the selling price of the car increases**
-
-```{r echo=FALSE}
 # Scatter plot of selling price vs max power (by fuel type)
-colours = c("Petrol" = "blue", "Diesel"="green","CNG"= "orange","LPG"="red")
+colours = c("Petrol" = "blue", "Diesel"="green")
 plot(selling_price_in_10k ~ max_power, data=car_details,
      col=colours[car_details$fuel],
      main="Selling Price vs Max Power (by Fuel Type)",
      xlab="Max Power (bhp)",
      ylab="Selling Price (10,000 INR)" )
-legend("topleft", legend = c("Petrol","Diesel","CNG","LPG"),
-       col = c("blue", "green","orange","red"), pch = 19)
+legend("topleft", legend = c("Petrol","Diesel"),
+       col = c("blue", "green"), pch = 19)
 ```
-<!-- This plot needs commentary  -->
 
-- Insert commentary about the above plot here.
+- From the above plot, we can see that the there is a linear relationship between max power and selling price.
+- We can conclude that **when the maximum power increases, the selling price of the car increases**
+- In general we saw that Diesel powered cars have higher selling price. 
+- But from the above plot we see that Petrol powered cars with higher horse power have higher selling price. 
 
-#### Conclusions of Variable Distribution Analysis
+#### Inference from Data Analysis
 
 - The selling price distribution is positively skewed. Positively skewed data has extreme values which makes it hard to fit models. 
   - Hence, logarithmic transformation can make the selling price distribution to be normally distributed. 
-- Logarithmic transformations can also help stabilize the variance, making the data more homoscedastic and suitable for analysis.
+  - Logarithmic transformations can also help stabilize the variance, making the data more homoscedastic and suitable for analysis.
 - There is a positive correlation between year and selling price.
+- The selling price also tends to increase with engine displacement and max power.
 - Cost of Budget cars, mid range cars and luxury car increases with Year.
 - As the km_driven increases, the selling price tends to decrease.
 - There is no impact of fuel efficiency on selling price
-- The engine and max_power also tends to increase with selling price.
 - The median cost of Automatic transmission cars are higher than Manual transmission cars.
-- The median price of test drive cars are very high when compared to other owner types
+- The median price of test drive cars are very high when compared to other owner types.
+- Cost of Diesel cars are generally high. But cost of petrol cars with high horse power is also high
 
 
 #### Analysis of Correlation Between Numeric variables
@@ -533,6 +526,9 @@ high_cor_df = data.frame(
 # Display first few pairs of high-correlation variables
 head(high_cor_df, 6)
 ```
+- From the correlation plot and correlation matrix we can see that, following combination of fields have correlation above 0.5
+- (max_power and selling_price) has high correlation of 0.6872307. Hence selling price increase with max_power
+- (max_power and engine) has high correlation of 0.6863027. Hence max power and engine are correlated predictors
 
 ### Model Development and Validation
 
