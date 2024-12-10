@@ -534,6 +534,15 @@ head(high_cor_df, 6)
 
 In this section, a model for predicting values of ```selling_price``` based on the values of the other variables is developed and the performance of the model is analyzed. 
 
+#### Logarithmic transformation of response variable
+
+Logarithmic transformation can make the positively skewed distribution of selling price to be normally distributed and makes it more suitable for model building
+
+```{r}
+car_details$selling_price_in_10k = log(car_details$selling_price_in_10k)
+```
+
+
 #### Splitting data into train and test sets
 ```{r}
 set.seed(125) # For reproducibility
@@ -546,63 +555,49 @@ nrow(test_data)
 
 #### Additive "full" linear model (using all available predictors except ```make```)
 ```{r}
-# Definition of "full" linear model
-full_model = lm(selling_price_in_10k ~ .-make, data = train_data)
+# Definition of "full" linear model with BIC-based stepwise model selection starting from full model (both directions)
+n= nrow(train_data)
+bic_full_add_model = step(lm(selling_price_in_10k ~ .-make, data = train_data),direction="both",k=log(n),trace=0)
 
 # Model summary
-summary(full_model)
+summary(bic_full_add_model)
+
+#Number of parameters 
+length(coef(bic_full_add_model))
 
 # Diagnostic plots
 par(mfrow = c(1, 2))
-plot(full_model,which=c(1,2))
+plot(bic_full_add_model,which=c(1,2))
 
 # Diagnostic tests
-bp_test <- bptest(full_model)
+bp_test = bptest(bic_full_add_model)
 print(bp_test)
 
 # Subset residuals for Shapiro-Wilk test (up to 5000 samples)
-residual_subset <- sample(residuals(full_model), size = 5000)
-shapiro_test <- shapiro.test(residual_subset)
+residual_subset = sample(residuals(bic_full_add_model), size = 5000)
+shapiro_test = shapiro.test(residual_subset)
 print(shapiro_test)
 
 # Multicollinearity test
-vif(full_model)
+vif(bic_full_add_model)
 ```
 
-The "full" linear model has a high $R^2$ value of 0.7212, indicating that 72.12% of the variance in ```selling_price_in_10k``` is explained by the predictors.
+|                                                              | Adjusted R^2 | Number of parameters | Breusch-Pagan test                                       | Shapiro-Wilk normality test<br>(with 5000 sample residuals) | VIF>5 | Non significant predictors(pvalue > 0.05) |
+|--------------------------------------------------------------|--------------|----------------------|----------------------------------------------------------|-------------------------------------------------------------|-------|-------------------------------------------|
+| Full additive model with BIC<br>(Excluding "make" predictor) | 0.8469423    | 17                   | Constant variance assumption <br>failed with BP = 372.41 | Normality assumption f<br>ailed with W = 0.98173            | None  | seller_typeTrustmark Dealer               |
+|                                                              |              |                      |                                                          |                                                             |       |                                           |
 
-Most predictors are statistically significant (p-value < 0.05), suggesting they contribute meaningfully to the model.
-Exceptions are:
+- The "full" linear model has a high $R^2$ value of 0.8469423, indicating that 84.69% of the variance in ```selling_price_in_10k``` is explained by the predictors.
 
-  - ```seller_typeTrustmark Dealer``` (p = 0.33)
-  - ```ownerFourth & Above Owner``` (p = 0.14)
-  - ```seats``` (p = 0.48)
+- Most predictors are statistically significant (p-value < 0.05), suggesting they contribute meaningfully to the model.
+Except  ```seller_typeTrustmark Dealer``` (p = 0.165779)
 
-From this initial model, it is apparent:
+- Diagnostic testing for this model:
+  - The Breusch-Pagan test yielded a very high test statistic of 372.41 and a p-value less than $2.2*10^{-16}$ which rejects the null hypothesis that constant variance exists in residuals
+  
+  - The Shapiro-Wilk test with 5000 sample residuals yielded a low p-value less than $2.2*10^{-16}$, which rejects the null hypothesis that the residuals are normally distributed. 
+  
 
-  - ```year``` is positively correlated with price (newer cars sell for higher prices)
-  - ```engine```, ```max_power```, ```make_category:Luxury``` are positively correlated with selling prices (more powerful vehicles and luxury vehicles sell for more)
-  - ```km_driven_in_10k```, ```fuelPetrol```, and ```fuel_efficiency``` are negatively correlated with selling price: higher mileage vehicles and petrol vehicles are associated with lower selling prices
-
-Diagnostic testing for this model:
-
-  - The Breusch-Pagan test yielded a very high test statistic of 1538.2, and a p-value less than $2.2*10^{-16}$, which strongly indicates heteroscedasticity. This is reflected by the "fat tails" in the QQ plot.
-
-  - The Shapiro-Wilk test yielded a low p-value less than $2.2*10^{-16}$, which strongly rejects the null hypothesis that the residuals are normally distributed. 
-
-For this model, VIF analysis shows:
-
-  - All VIFs are below 5, indicating no severe multicollinearity among predictors. However:
-    - ```engine``` (VIF = 2.36) and ```fuel_efficiency``` (VIF = 1.80) have relatively higher multicollinearity (but they still within acceptable ranges).
-
-#### BIC-based stepwise model selection starting from full model (both directions)
-```{r}
-n= nrow(train_data)
-bic_full_model = step(full_model,direction="both",k=log(n),trace=0)
-summary(bic_full_model)
-plot(bic_full_model,which=c(1,2))
-vif(bic_full_model)
-```
 
 #### "Small model" with interaction terms
 ```{r}
@@ -623,7 +618,7 @@ bptest(bic_small_model)
 ```
 
 #### ANOVA of both models created by BIC-based stepwise selection
-```{r}
+```{r eval=FALSE, include=FALSE}
 anova(bic_small_model, bic_full_model)
 ```
 
