@@ -1,5 +1,5 @@
 ---
-title: "Stat 420 Final Project Proposal <br> Used Car Pricing"
+title: "Stat 420 Data Analysis Project: <br> Modeling Used Car Pricing"
 output: 
   html_document:
     theme: readable
@@ -20,10 +20,6 @@ div.author {
 <div class="author">
 Max Piazza <br> David Orona <br> Nithya Arumugam <br> Abhitej Bokka
 </div>
-
-
-# Data Analysis Project: Modeling Used Car Prices
-
 
 ## Introduction
 
@@ -260,18 +256,29 @@ make_category_mapping_df <- as.data.frame(make_category_mapping)
 print(make_category_mapping_df, row.names = FALSE)  
 ```
 
-#### Sample of dataset after cleaning
+#### Final structure of the ```car_details``` dataset 
+
+| Attribute Name         | Description                                                                                                  | Variable Type |
+|-------------------------|--------------------------------------------------------------------------------------------------------------|---------------|
+| `make`                | The manufacturer of the vehicle (e.g., Maruti, Hyundai, Honda, etc.).                                       | Factor        |
+| `year`                | The year the vehicle was manufactured.                                                                      | Numeric       |
+| `selling_price_in_10k` | The selling price of the vehicle in ten-thousands of Indian Rupees (INR).                                   | Numeric       |
+| `km_driven_in_10k`    | The total distance the vehicle has been driven, measured in ten-thousands of kilometers.                    | Numeric       |
+| `fuel`                | The type of fuel used by the vehicle ("Diesel", "Petrol", "LPG", or "CNG").                                 | Factor        |
+| `seller_type`         | The type of seller ("Individual", "Dealer", or "Trustmark Dealer").                                         | Factor        |
+| `transmission`        | The type of transmission system ("Manual" or "Automatic").                                                 | Factor        |
+| `owner`               | The number of previous owners of the vehicle ("First Owner", "Second Owner", "Third Owner", "Fourth and Above Owner", or "Test Drive Car").                        | Factor        |
+| `fuel_efficiency`     | The fuel efficiency of the vehicle in km/l.          | Numeric       |
+| `engine`              | The engine displacement capacity of the vehicle, measured in cubic centimeters (CC).                       | Numeric       |
+| `max_power`           | The maximum power output of the vehicle's engine, measured in brake horsepower (BHP).                      | Numeric       |
+| `seats`               | The seating capacity of the vehicle.                                                                       | Numeric       |
+| `make_category`       | Categorized vehicle make (e.g., "Luxury", "Midrange", or "Budget").                                         | Factor        |
+
+#### Sample of final dataset
 ```{r}
-head(car_details)
+head(car_details, n=8)
 ```
 
-#### Final structure of the ```car_details``` dataset 
-```{r}
-structure_car_details = data.frame(
-  Column = names(car_details),
-  Type = unname(sapply(car_details, class)))
-print(structure_car_details)
-```
 
 ### Data Analysis
 
@@ -393,6 +400,7 @@ plot(selling_price_in_10k ~ owner, data = car_details, las = 2, cex.axis = 0.5,
 
 #### Scatter Plots of Selling Price vs Different Numerical Variables
 
+##### Selling Price vs Year and Transmission Type
 ```{r}
 # Scatter plot of selling price vs year and transmission type
 colours = ifelse(car_details$transmission == "Automatic", "blue", "red")
@@ -408,7 +416,7 @@ legend("topleft", legend = c("Automatic", "Manual"),
 - This suggests that newer cars are priced higher than older ones.
 - We can also see that **automatic transmission cars have a higher selling price across all years.** 
 
-
+##### Selling Price vs Year and Make Category
 ```{r}
 # Scatter plot of selling price vs year and make category
 colours = c("Budget" = "blue", "Midrange"="green","Luxury"= "orange")
@@ -424,7 +432,7 @@ legend("topleft", legend = c("Budget","Midrange","Luxury"),
 - Similar to previous plot, there is a positive correlation between year and selling price.
 - We see that **cost of Budget cars, mid range cars and luxury car increases with Year.**
 
-
+##### Selling Price vs Km Driven
 ```{r}
 # Scatter plot of selling price vs km driven
 plot(selling_price_in_10k ~ km_driven_in_10k, data=car_details,
@@ -447,6 +455,7 @@ plot(selling_price_in_10k ~ km_driven_in_10k, data=car_details,
 - There are 2 observations which are different from the general pattern with values of km driven (150.0000 236.0457). This can been seen in the above plot.
 - These observations can impact the model. Hence those two data points are excluded from the second plot.
 
+##### Selling Price vs Fuel Efficiency
 ```{r}
 
 # Subset out 15 observations with fuel_efficiency=0 
@@ -462,6 +471,7 @@ plot(selling_price_in_10k ~ fuel_efficiency, data=car_details,
 - Most data points are clustered at fuel efficiency values of 10 to 30 km/l, and there doesn't seem to be a linear relationship.
 - That is **higher fuel efficiency doesn't indicate higher selling price.**
 
+##### Selling Price vs Engine Displacement
 ```{r echo=FALSE}
 # Scatter plot of selling price vs engine displacement
 plot(selling_price_in_10k ~ engine, data=car_details,
@@ -473,7 +483,7 @@ plot(selling_price_in_10k ~ engine, data=car_details,
 
 - From the above plot, we can see that the **selling price is high for higher values of engine power**
 
-
+##### Selling Price vs Max Power
 ```{r}
 # Scatter plot of selling price vs max power (by fuel type)
 colours = c("Petrol" = "blue", "Diesel"="green")
@@ -488,22 +498,22 @@ legend("topleft", legend = c("Petrol","Diesel"),
 
 - From the above plot, we can see that the there is a linear relationship between max power and selling price.
 - We can conclude that **when the maximum power increases, the selling price of the car increases**
-- In general we saw that Diesel powered cars have higher selling price. 
-- But from the above plot we see that Petrol powered cars with higher horse power have higher selling price. 
+- In general, we see that diesel-powered cars have higher selling prices. 
+  - But in the above plot, we see that petrol-powered cars with higher horsepower have higher selling prices. 
 
-#### Inference from Data Analysis
+##### Conclusions of Variable Distribution Analysis
 
 - The selling price distribution is positively skewed. Positively skewed data has extreme values which makes it hard to fit models. 
   - Hence, logarithmic transformation can make the selling price distribution to be normally distributed. 
   - Logarithmic transformations can also help stabilize the variance, making the data more homoscedastic and suitable for analysis.
 - There is a positive correlation between year and selling price.
 - The selling price also tends to increase with engine displacement and max power.
-- Cost of Budget cars, mid range cars and luxury car increases with Year.
-- As the km_driven increases, the selling price tends to decrease.
-- There is no impact of fuel efficiency on selling price
-- The median cost of Automatic transmission cars are higher than Manual transmission cars.
-- The median price of test drive cars are very high when compared to other owner types.
-- Cost of Diesel cars are generally high. But cost of petrol cars with high horse power is also high
+- Prices of budget cars, midrange cars and luxury car increase with Year.
+- As the km driven increases, the selling price tends to decrease.
+- There is no impact of fuel efficiency on selling price.
+- The median price of automatic transmission cars is higher than that of manual transmission cars.
+- The median price of test drive cars is very high when compared to other owner types.
+- Prices of diesel cars are generally high. But prices of petrol cars with high horsepower are also high.
 
 
 #### Analysis of Correlation Between Numeric variables
@@ -526,6 +536,7 @@ high_cor_df = data.frame(
 # Display first few pairs of high-correlation variables
 head(high_cor_df, 6)
 ```
+
 - From the correlation plot and correlation matrix we can see that, following combination of fields have correlation above 0.5
 - (max_power and selling_price) has high correlation of 0.6872307. Hence selling price increase with max_power
 - (max_power and engine) has high correlation of 0.6863027. Hence max power and engine are correlated predictors
