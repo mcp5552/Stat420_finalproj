@@ -240,17 +240,27 @@ There could be some potential errors. For example, Jeeps and Opels are not norma
 ```{r}
 # Create new column "make_category" from "make" column
 car_details$make_category = ifelse(car_details$make %in% 
-                                     c("Maruti", "Tata", "Mahindra", "Datsun", 
-                                        "Renault", "Chevrolet", "Fiat", 
-                                         "Daewoo", "Ambassador", "Ashok"), 
-                                    "Budget",
-                             ifelse(car_details$make %in% 
-                                      c("Honda", "Ford", "Hyundai","Toyota", "Volkswagen","Nissan", 
-                                        "Skoda", "Mitsubishi","Force", "Kia","MG"), 
-                                    "Midrange", 
-                                    "Luxury"))
+  c("Ambassador", "Ashok", "Daewoo", "Datsun", "Opel", "Fiat"), 
+  "Budget",
+  ifelse(car_details$make %in% 
+           c("Chevrolet", "Maruti", "Renault", "Mitsubishi", "Ford", 
+             "Honda", "Hyundai", "Isuzu", "Kia", "Toyota", "Force", 
+             "Volkswagen", "Tata", "Skoda", "Jeep", "MG", "Nissan", "Mahindra"), 
+         "Midrange", 
+         "Luxury"
+  )
+)
+
+# Convert make_category to a factor
 car_details$make_category = as.factor(car_details$make_category)
+
+# Output all levels of the make_category variable
 levels(car_details$make_category)
+
+# Create a summary table of makes and their categories and view the mapping
+make_category_mapping <- unique(car_details[, c("make", "make_category")])
+make_category_mapping_df <- as.data.frame(make_category_mapping)
+print(make_category_mapping_df, row.names = FALSE)  
 ```
 
 #### Sample of dataset after cleaning
@@ -277,6 +287,7 @@ car_details=subset(car_details,subset = car_details$selling_price_in_10k < 720,)
 
 ##### Selling Price distribution
 ```{r}
+# Histogram of selling prices 
 hist(car_details$selling_price_in_10k,xlab="Selling Price (10,000 INR)",
      main="Selling Price distribution",
      breaks = 30, 
