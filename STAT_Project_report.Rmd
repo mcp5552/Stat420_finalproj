@@ -35,7 +35,7 @@ This dataset aggregates detailed information on over 10,000 used cars, including
 
 Our analysis is driven by three core objectives:
 
-* To model the relationship between vehicle specifications (e.g., mileage, transmission, and fuel type) and their pricing.
+* To model the relationship between vehicle specifications (e.g., fuel efficiency, transmission, and fuel type) and their pricing.
 * To identify regional trends and seller-specific factors influencing market prices.
 * To evaluate how performance metrics, such as engine power and fuel efficiency, impact purchasing behavior.
 
@@ -58,7 +58,7 @@ The dataset contains the following attributes:
 | 6  |   `seller_type`    |   The type of seller ("Individual", "Dealer" or "Trustmark Dealer").                                     |
 | 7  |   `transmission`   |   The type of transmission system ("Manual" or "Automatic").                         |
 | 8  |   `owner`          |   The number of previous owners of the vehicle ("First Owner", "Second Owner", "Third Owner", "Fourth and Above Owner", or "Test Drive Car").  |
-| 9  |   `mileage`        |   The fuel efficiency of the vehicle (in km/l or km/kg).                           |
+| 9  |   `mileage`        |   The fuel efficiency of the vehicle (in either km/l or km/kg).                           |
 | 10 |   `engine`         |   The engine displacement capacity (in CC).                                         |
 | 11 |   `max_power`      |   The maximum power output of the vehicle’s engine, measured in brake horsepower (bhp).|
 | 12 |   `torque`         |   A pair of torque and RPM values representing the max torque of the vehicle. The torque values are in either Nm or kgm, and the RPM values are either values or value ranges.                                                              |
@@ -147,9 +147,14 @@ car_details <- car_details[!grepl("km/kg", car_details$mileage), ]
 car_details$mileage = word(car_details$mileage,1)
 # Change data_type of "mileage" from character to numeric
 car_details$mileage=as.numeric(car_details$mileage)
-# View new data for "mileage" variable
-head(car_details$mileage, n=20)
+
+# Rename "mileage" to "fuel_efficiency"
+colnames(car_details)[which(names(car_details) == "mileage")] = "fuel_efficiency"
+
+# View new data for "fuel_efficiency" variable
+head(car_details$fuel_efficiency, n=20)
 ```
+Above, the ```mileage``` variable is renamed to ```fuel_efficiency``` to prevent confusion with the ```km_driven``` variable, which represents the quantity normally referred to as vehicle "mileage". 
 
 #### Transforming ```engine``` variable
 ```{r}
@@ -262,31 +267,31 @@ print(structure_car_details)
 ```
 
 ### Data Analysis
+
+#### Variable Distribution Analysis
 ```{r}
 car_details$selling_price_in_10k[car_details$selling_price_in_10k > 720]
 car_details=subset(car_details,subset = car_details$selling_price_in_10k < 720,)
 ```
-- There is one observation, which is quiet different from the general pattern of selling price. This can impact the model that we build, hence excluded one observation with selling_price = 1000. 
+- There is one observation, which is quite different from the general pattern of selling price. This can impact the model that we build, hence excluded one observation with ```selling_price``` = 1000. 
 
-#### Selling Price distribution
+##### Selling Price distribution
 ```{r}
-hist(car_details$selling_price_in_10k,xlab="Selling Price (in Ten Thousands)",
+hist(car_details$selling_price_in_10k,xlab="Selling Price (10,000 INR)",
      main="Selling Price distribution",
+     breaks = 30, 
      col = "lightblue")
 ```
 
-- The above plot is positively skewed, meaning the selling price for most of the observations are less than or equal to 200 and there are very less number of observations are above 20,00,000 INR. 
+- The above plot is positively skewed, meaning the selling prices for most of the observations are less than or equal to 2 million INR, and there are much fewer observations with selling prices above this amount. 
 
-
-
-#### Frequency Distribution of categorical variables
+##### Frequency Distribution of Categorical Variables
 ```{r}
 make_counts = table(car_details$make)
 fuel_type_car_count = table(car_details$fuel)
 seller_type_car_count = table(car_details$seller_type)
 trans_type_car_count = table(car_details$transmission)
 owner_type_car_count = table(car_details$owner)
-
 
 par(mfrow = c(2, 3))
 # Plot 1: Number of cars by make
@@ -305,7 +310,7 @@ barplot(sort(fuel_type_car_count), horiz = TRUE, las = 1, cex.names = 0.9,
 barplot(sort(seller_type_car_count), horiz = TRUE, las = 1, cex.names = 0.8,
         col = "lightblue", main = "Num. of Cars in Each Seller Type")
 
-# Plot 4: Number of cars by trans type
+# Plot 4: Number of cars by transmission type
 barplot(sort(trans_type_car_count), horiz = TRUE, las = 1, cex.names = 0.8,
         col = "lightblue", main = "Num. of Cars in Each Trans Type")
 
@@ -314,55 +319,79 @@ barplot(sort(owner_type_car_count), horiz = TRUE, las = 1, cex.names = 0.6,
         col = "lightblue", main = "Num. of Cars in Each Owner Type")
 ```
 
-### Box-plots of categorical variables vs selling price. 
+##### Boxplots of Selling Price by Different Categorical Variables
 
-#### Selling Price based on make
+###### Selling Price by Car Make
 ```{r}
+# Boxplot of selling price by car make
 boxplot(selling_price_in_10k ~ make, data = car_details,col=rainbow(length(unique(car_details$make))),
         las = 2,cex.axis = 0.7,               
-        main = "Car Make Vs Selling Price",
+        main = "Boxplot of Selling Price by Car Make",
         xlab = "Car Make",
-        ylab = "Selling Price (in 10k)")
+        ylab = "Selling Price (10,000 INR)")
 ```
 
-- The above boxplot indicates a significant variation in selling prices across different car makes. Some brands have a much wider price range than others. 
-- Example Mercedes-Benz, BMW, Jaguar,Land Rover and Volvo have the highest median selling prices. 
-- While cars like Tata, Maruti, and Daewoo have the lowest median selling prices
+- The above boxplots indicates a significant variation in selling prices across different car makes. Some brands have much wider price ranges than others. 
+- Brands like Mercedes-Benz, BMW, Jaguar, Land Rover and Volvo have the highest median selling prices, while cars like Tata, Maruti, and Daewoo have the lowest median selling prices.
 
+###### Selling Price by Fuel Type
 ```{r}
-par(mfrow = c(1, 2))
-boxplot(selling_price_in_10k ~ fuel, data=car_details,cex.axis = 0.8,
-        col=rainbow(length(unique(car_details$fuel))),
-     main="SellingPrice based on fuel type")
-plot(selling_price_in_10k ~ seller_type, data=car_details,cex.axis = 0.6,
-     col=rainbow(length(unique(car_details$seller_type))),
-     main="SellingPrice based on seller type")
+# Boxplot of selling price by fuel type
+boxplot(selling_price_in_10k ~ fuel, data = car_details, cex.axis = 0.8,
+        col = rainbow(length(unique(car_details$fuel))),
+        main = "Box Plot of Selling Price by Fuel Type",
+        xlab = "Fuel Type", ylab = "Selling Price (10,000 INR)")
+```
+<!-- Need some commentary about this plot -->
+
+- Insert description here
+
+###### Selling Price by Seller Type
+```{r}
+# Boxplot of selling price by seller type
+boxplot(selling_price_in_10k ~ seller_type, data = car_details, cex.axis = 0.6,
+        col = rainbow(length(unique(car_details$seller_type))),
+        main = "Box Plot of Selling Price by Seller Type",
+        xlab = "Seller Type", ylab = "Selling Price (10,000 INR)")
 ```
 
-- Diesel powered cars have highest median selling price followed by petrol powered and CNG or LPG cars.
-- The Individual seller type cars have lowest median cost compared to Dealers.
-
+- Diesel-powered cars have highest median selling price followed by petrol powered and CNG or LPG cars.
+- The Individual seller type cars have the lowest median cost.
+ 
+###### Selling Price by Transmission Type
 ```{r}
-par(mfrow = c(1, 2))
-plot(selling_price_in_10k ~ transmission, data=car_details,
-     col=rainbow(length(unique(car_details$transmission))),
-     main="SellingPrice based on trans. type")
-plot(selling_price_in_10k ~ owner, data=car_details,las=2,cex.axis = 0.5,
-     col=rainbow(length(unique(car_details$owner))),
-     main="SellingPrice based on owner type")
+# Boxplot of selling price by transmission type
+plot(selling_price_in_10k ~ transmission, data = car_details,
+     col = rainbow(length(unique(car_details$transmission))),
+     main = "Boxplot of Selling Price by Transmission Type",
+     xlab = "Transmission Type", 
+     ylab = "Selling Price (10,000 INR)")
 ```
 
-- We can see that there is a slight difference in the selling price of the Automatic and Manual transmission cars. The median cost of Automatic transmission cars are higher than Manual transmission cars. 
-- The selling price of cars across different owner types are significantly different. The median price of test drive cars are very high and the rest of the owner types have low median cost
+- We can see that there is a slight difference in the selling price of the Automatic and Manual transmission cars. The median cost of Automatic transmission cars is higher than that of Manual transmission cars. 
 
-### Scatter plot of numerical varaibles vs selling price
+###### Selling Price by Owner Type
+```{r}
+# Boxplot of selling price by owner type
+plot(selling_price_in_10k ~ owner, data = car_details, las = 2, cex.axis = 0.5,
+     col = rainbow(length(unique(car_details$owner))),
+     main = "Boxplot of Selling Price vs Owner Type",
+     xlab = "Owner Type", 
+     ylab = "Selling Price (10,000 INR)")
+```
+
+- The selling prices of cars across different owner types are significantly different. The median price of test drive cars are very high and the rest of the owner types have low median cost
+
+
+#### Scatter Plots of Selling Price vs Different Numerical Variables
 
 ```{r}
+# Scatter plot of selling price vs year and transmission type
 colours = ifelse(car_details$transmission == "Automatic", "blue", "red")
 plot(selling_price_in_10k ~ year,data=car_details,col=colours,pch=19,
-     main = "Selling Price based on Year (with Transmission Type)",
+     main = "Selling Price vs Year and Transmission Type",
      xlab = "Year",
-     ylab = "Selling Price (in Ten Thousands)")
+     ylab = "Selling Price (10,000 INR)")
 legend("topleft", legend = c("Automatic", "Manual"),
        col = c("blue", "red"), pch = 19)
 ```
@@ -373,12 +402,13 @@ legend("topleft", legend = c("Automatic", "Manual"),
 
 
 ```{r}
+# Scatter plot of selling price vs year and make category
 colours = c("Budget" = "blue", "Midrange"="green","Luxury"= "orange")
 plot(selling_price_in_10k ~ year,data=car_details,
      col = colours[car_details$make_category],pch=19,
-     main = "Selling Price based on Year (with make_category)",
+     main = "Selling Price vs Year and Make Category",
      xlab = "Year",
-     ylab = "Selling Price (in Ten Thousands)")
+     ylab = "Selling Price (10,000 INR)")
 legend("topleft", legend = c("Budget","Midrange","Luxury"),
        col = c("blue", "green","orange"), pch = 19)
 ```
@@ -386,83 +416,110 @@ legend("topleft", legend = c("Budget","Midrange","Luxury"),
 - Similar to previous plot, there is a positive correlation between year and selling price.
 - We see that **cost of Budget cars, mid range cars and luxury car increases with Year.**
 
+
 ```{r}
-par(mfrow = c(1, 2))
+# Scatter plot of selling price vs km driven
 plot(selling_price_in_10k ~ km_driven_in_10k, data=car_details,
-     xlab="KM_Driven((in Ten Thousand)",
-     ylab="Selling_Price(in Ten Thousand)",
-     main="Price based on km_driven")
+     xlab="Km Driven (10,000 km)",
+     ylab="Selling Price (10,000 INR)",
+     main="Selling Price vs Km Driven")
+
+# Subset out extreme values
 car_details = subset(car_details,car_details$km_driven_in_10k < 100,)
+
+# Scatter plot of selling price vs km driven after removing extreme values
 plot(selling_price_in_10k ~ km_driven_in_10k, data=car_details,
-     xlab="KM_Driven((in Ten Thousand)",
-     ylab="Selling_Price(in Ten Thousand)",
-     main="After removing extreme values")
+     xlab="Km Driven (10,000 km)",
+     ylab="Selling Price (10,000 INR)",
+     main="Selling Price vs Km Driven (extreme values removed)")
 ```
 
-- The relationship between selling_price and km_driven doesn't seem to be strongly linear
-- But we can see that **as the km_driven increases, the selling price remains in low range.** 
-- There are 2 observations which are different from the general pattern with values of KM Driven(150.0000 236.0457). This can been seen in the above plot left side.
-- These observations can impact the model. Hence those two data points are excluded.
-
+- The relationship between selling price and kilometers driven doesn't seem to be strongly linear.
+- But we can see that **as km driven increases, the selling price remains in low range.** 
+- There are 2 observations which are different from the general pattern with values of km driven (150.0000 236.0457). This can been seen in the above plot.
+- These observations can impact the model. Hence those two data points are excluded from the second plot.
 
 ```{r}
-plot(selling_price_in_10k ~ mileage, data=car_details,
-     xlab="Mileage",
-     ylab="Selling_Price(in Ten Thousand)",
-     main="Price based on Mileage")
+# Scatter plot of selling price vs fuel efficiency
+plot(selling_price_in_10k ~ fuel_efficiency, data=car_details,
+     xlab="Fuel Efficiency (km/l)",
+     ylab="Selling Price (10,000 INR)",
+     main="Selling Price vs Fuel Efficiency")
 ```
 
-- Most data points are clustered at mileage values 10 to 30, and there doesn't seem to be a linear relationship.
-- That is **higher mileage doesn't indicate higher selling price.**
-
+- Most data points are clustered at fuel efficiency values of 10 to 30 km/l, and there doesn't seem to be a linear relationship.
+- That is **higher fuel efficiency doesn't indicate higher selling price.**
 
 ```{r echo=FALSE}
-par(mfrow = c(1, 2))
+# Scatter plot of selling price vs engine displacement
 plot(selling_price_in_10k ~ engine, data=car_details,
-     main="Price based on engine")
-plot(selling_price_in_10k ~ max_power, data=car_details,
-     main="Price based on max_power")
+     main="Selling Price vs Engine Displacement",
+     ylab="Selling Price (10,000 INR)",
+     xlab="Engine Displacement (CC)"
+     )
 ```
 
-- From the "Price based on engine" plot, we can see that the **selling price is high for higher engine power**
-- From the "Price based on max_power" plot, we can see that the there is a linear relationship between max_power and selling price.
-- **When the maximum power increases, the selling price of the car is increasing**
+- From the above plot, we can see that the **selling price is high for higher values of engine power**
+
+```{r}
+# Scatter plot of selling price vs max power
+plot(selling_price_in_10k ~ max_power, data=car_details,
+     main="Selling Price vs Max Power",
+     ylab="Selling Price (10,000 INR)",
+     xlab="Max Power (bhp)"
+     )
+```
+
+- From the above plot, we can see that the there is a linear relationship between max power and selling price.
+- We can conclude that **when the maximum power increases, the selling price of the car increases**
 
 ```{r echo=FALSE}
+# Scatter plot of selling price vs max power (by fuel type)
 colours = c("Petrol" = "blue", "Diesel"="green","CNG"= "orange","LPG"="red")
 plot(selling_price_in_10k ~ max_power, data=car_details,
      col=colours[car_details$fuel],
-     main="Price based on max_power")
+     main="Selling Price vs Max Power (by Fuel Type)",
+     xlab="Max Power (bhp)",
+     ylab="Selling Price (10,000 INR)" )
 legend("topleft", legend = c("Petrol","Diesel","CNG","LPG"),
        col = c("blue", "green","orange","red"), pch = 19)
 ```
+<!-- This plot needs commentary  -->
 
+- Insert commentary about the above plot here.
 
-#### Conclusion of Data analysis
+#### Conclusions of Variable Distribution Analysis
 
 - The selling price distribution is positively skewed. Positively skewed data has extreme values which makes it hard to fit models. 
-- Hence Logarithmic transformation can make the selling price distribution to be normally distributed. 
+  - Hence, logarithmic transformation can make the selling price distribution to be normally distributed. 
 - Logarithmic transformations can also help stabilize the variance, making the data more homoscedastic and suitable for analysis.
 - There is a positive correlation between year and selling price.
 - Cost of Budget cars, mid range cars and luxury car increases with Year.
 - As the km_driven increases, the selling price tends to decrease.
-- There is no impact of mileage on selling price
+- There is no impact of fuel efficiency on selling price
 - The engine and max_power also tends to increase with selling price.
 - The median cost of Automatic transmission cars are higher than Manual transmission cars.
 - The median price of test drive cars are very high when compared to other owner types
 
 
-#### Correlation of the numeric variables
+#### Analysis of Correlation Between Numeric variables
 ```{r}
-pairs(selling_price_in_10k ~ year+km_driven_in_10k+mileage+engine+max_power+seats ,data=car_details)
+# Pairs plot for numeric variables
+pairs(selling_price_in_10k ~ year+km_driven_in_10k+fuel_efficiency+engine+max_power+seats ,data=car_details)
+
+# Calculate correlation matrix for numeric variables
 cor_mat = cor(car_details[,sapply(car_details,is.numeric)])
 cor_mat
+
+# Extract high correlation values 
 high_cor = cor_mat[cor_mat > 0.5 & cor_mat != 1]
 high_cor_indices = which(cor_mat > 0.5 & cor_mat != 1, arr.ind = TRUE)
 high_cor_df = data.frame(
   row = rownames(cor_mat)[high_cor_indices[, 1]],
   column = colnames(cor_mat)[high_cor_indices[, 2]],
   correlation = high_cor)
+
+# Display first few pairs of high-correlation variables
 head(high_cor_df, 3)
 ```
 
@@ -497,7 +554,7 @@ vif(bic_full_model)
 
 ### Small model with interaction
 ```{r}
-small_model = lm(selling_price_in_10k ~ make_category*year*max_power + year*transmission + owner + seller_type + km_driven_in_10k+mileage, data = train_data)
+small_model = lm(selling_price_in_10k ~ make_category*year*max_power + year*transmission + owner + seller_type + km_driven_in_10k+fuel_efficiency, data = train_data)
 summary(small_model)
 plot(small_model,which=c(1,2))
 vif(small_model,type = "predictor")
