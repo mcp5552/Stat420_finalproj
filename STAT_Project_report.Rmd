@@ -549,14 +549,6 @@ head(high_cor_df)
 
 In this section, a model for predicting values of ```selling_price``` based on the values of the other variables is developed and the performance of the model is analyzed. 
 
-#### Logarithmic transformation of response variable
-
-Logarithmic transformation can make the positively skewed distribution of selling price to be normally distributed and makes it more suitable for model building
-
-```{r}
-car_details$selling_price_in_10k = log(car_details$selling_price_in_10k)
-```
-
 
 #### Splitting data into train and test sets
 ```{r}
@@ -570,6 +562,75 @@ nrow(test_data)
 
 #### Additive "full" linear model (using all available predictors except ```make```)
 ```{r}
+# Definition of "full" linear model
+full_model = lm(selling_price_in_10k ~ .-make, data = train_data)
+
+# Model summary
+summary(full_model)
+
+#Number of parameters 
+length(coef(full_model))
+
+#Leave one out cross validation RMSE 
+sqrt(mean((resid(full_model) / (1 - hatvalues(full_model))) ^ 2))
+
+# Diagnostic plots
+par(mfrow = c(1, 2))
+plot(full_model,which=c(1,2))
+
+# Diagnostic tests
+bp_test <- bptest(full_model)
+print(bp_test)
+
+# Subset residuals for Shapiro-Wilk test (up to 5000 samples)
+residual_subset = sample(residuals(full_model), size = 5000)
+shapiro_test = shapiro.test(residual_subset)
+print(shapiro_test)
+
+# Multicollinearity test
+vif(full_model)
+```
+
+The "full" linear model has a high $R^2$ value of 0.7212, indicating that 72.12% of the variance in ```selling_price_in_10k``` is explained by the predictors.
+
+Most predictors are statistically significant (p-value < 0.05), suggesting they contribute meaningfully to the model.
+Exceptions are:
+
+  - ```seller_typeTrustmark Dealer``` (p = 0.33)
+  - ```ownerFourth & Above Owner``` (p = 0.14)
+  - ```seats``` (p = 0.48)
+
+From this initial model, it is apparent:
+
+  - ```year``` is positively correlated with price (newer cars sell for higher prices)
+  - ```engine```, ```max_power```, ```make_category:Luxury``` are positively correlated with selling prices (more powerful vehicles and luxury vehicles sell for more)
+  - ```km_driven_in_10k```, ```fuelPetrol```, and ```fuel_efficiency``` are negatively correlated with selling price: higher mileage vehicles and petrol vehicles are associated with lower selling prices
+
+Diagnostic testing for this model:
+
+  - The Breusch-Pagan test yielded a very high test statistic of 1538.2, and a p-value less than $2.2*10^{-16}$, which strongly indicates heteroscedasticity. This is reflected by the "fat tails" in the QQ plot.
+
+  - The Shapiro-Wilk test yielded a low p-value less than $2.2*10^{-16}$, which strongly rejects the null hypothesis that the residuals are normally distributed. 
+
+For this model, VIF analysis shows:
+
+  - All VIFs are below 5, indicating no severe multicollinearity among predictors. However:
+    - ```engine``` (VIF = 2.36) and ```fuel_efficiency``` (VIF = 1.80) have relatively higher multicollinearity (but they still within acceptable ranges).
+
+    
+#### Logarithmic transformation of response variable
+
+- From the previous Fitted vs Residual plot we can see there is a pattern in the residuals and the constant assumption is violated. 
+- Logarithmic transformation can make the positively skewed distribution of selling price to be normally distributed and makes it more suitable for model building and for stabilizing the variance.
+
+```{r}
+train_data$selling_price_in_10k = log(train_data$selling_price_in_10k)
+test_data$selling_price_in_10k = log(test_data$selling_price_in_10k)
+```
+
+
+#### Additive "full" linear model (using all available predictors except ```make```) | with BIC
+```{r}
 # Definition of "full" linear model with BIC-based stepwise model selection starting from full model (both directions)
 n= nrow(train_data)
 bic_full_add_model = step(lm(selling_price_in_10k ~ .-make, data = train_data),direction="both",k=log(n),trace=0)
@@ -579,6 +640,9 @@ summary(bic_full_add_model)
 
 #Number of parameters 
 length(coef(bic_full_add_model))
+
+#Leave one out cross validation RMSE 
+sqrt(mean((resid(bic_full_add_model) / (1 - hatvalues(bic_full_add_model))) ^ 2))
 
 # Diagnostic plots
 par(mfrow = c(1, 2))
@@ -597,10 +661,10 @@ print(shapiro_test)
 vif(bic_full_add_model)
 ```
 
-|                                                              | Adjusted R^2 | Number of parameters | Breusch-Pagan test                                       | Shapiro-Wilk normality test<br>(with 5000 sample residuals) | VIF>5 | Non significant predictors(pvalue > 0.05) |
-|--------------------------------------------------------------|--------------|----------------------|----------------------------------------------------------|-------------------------------------------------------------|-------|-------------------------------------------|
-| Full additive model with BIC<br>(Excluding "make" predictor) | 0.8469423    | 17                   | Constant variance assumption <br>failed with BP = 372.41 | Normality assumption f<br>ailed with W = 0.98173            | None  | seller_typeTrustmark Dealer               |
-|                                                              |              |                      |                                                          |                                                             |       |                                           |
+|                                                              | Adjusted R^2 | Number of <br>parameters | Breusch-Pagan test                                         | Shapiro-Wilk test<br>(with 5k sample residuals)   | VIF>5 | Non significant <br>predictors(pvalue > 0.05) | LOOCV<br>RMSE |
+|--------------------------------------------------------------|--------------|--------------------------|------------------------------------------------------------|---------------------------------------------------|-------|-----------------------------------------------|---------------|
+| Full additive model with BIC<br>(Excluding "make" predictor) | 0.8469423    | 17                       | Constant variance assumption <br>violated with BP = 372.41 | Normality assumption violated<br>with W = 0.98173 | None  | seller_typeTrustmark Dealer                   | 0.2914511     |
+|                                                              |              |                          |                                                            |                                                   |       |                                               |               |
 
 - The "full" linear model has a high $R^2$ value of 0.8469423, indicating that 84.69% of the variance in ```selling_price_in_10k``` is explained by the predictors.
 
@@ -612,50 +676,177 @@ Except  ```seller_typeTrustmark Dealer``` (p = 0.165779)
   
   - The Shapiro-Wilk test with 5000 sample residuals yielded a low p-value less than $2.2*10^{-16}$, which rejects the null hypothesis that the residuals are normally distributed. 
   
+<!-- We can add explanation and/or tabulation to summarize the result -->
 
-
-#### "Small model" with interaction terms
+#### "Small additive model" with BIC-based stepwise feature selection
 ```{r}
-small_model = lm(selling_price_in_10k ~ make_category*year*max_power + year*transmission + owner + seller_type + km_driven_in_10k+fuel_efficiency, data = train_data)
-summary(small_model)
-plot(small_model,which=c(1,2))
-vif(small_model,type = "predictor")
+bic_small_add_model = step(lm(selling_price_in_10k ~ year + make_category + max_power + transmission + fuel + seller_type + owner +engine, data = train_data),direction="both",k=log(n),trace=0)
+
+# Model summary
+summary(bic_small_add_model)
+
+#Number of parameters 
+length(coef(bic_small_add_model))
+
+#Leave one out cross validation RMSE 
+sqrt(mean((resid(bic_small_add_model) / (1 - hatvalues(bic_small_add_model))) ^ 2))
+
+# Diagnostic plots
+par(mfrow = c(1, 2))
+plot(bic_small_add_model,which=c(1,2))
+
+# Diagnostic tests
+bptest(bic_small_add_model)
+
+
+# Subset residuals for Shapiro-Wilk test (up to 5000 samples)
+residual_subset = sample(residuals(bic_small_add_model), size = 5000)
+shapiro.test(residual_subset)
+
+
+# Multicollinearity test
+vif(bic_small_add_model)
 ```
 
-#### BIC-based stepwise model selection starting from "small model" (both directions)
+
+#### ANOVA of Small and Full additive models 
 ```{r}
-n= nrow(train_data)
-bic_small_model = step(small_model,direction="both",k=log(n),trace=0)
-summary(bic_small_model)
-plot(bic_small_model,which=c(1,2))
-vif(small_model,type = "predictor")
-bptest(bic_small_model)
+anova(bic_small_add_model, bic_full_add_model)
 ```
 
-#### ANOVA of both models created by BIC-based stepwise selection
-```{r eval=FALSE, include=FALSE}
-anova(bic_small_model, bic_full_model)
-```
+- From the above Analysis of Variance(ANOVA) result we can say that Full additive model is statistically better than small additive model, based on the high F-test low p_value and lower RSS.
+- Full additive model has lower RSS (446.00) than small additive model (453.14), indicating that full additive model fits the data better.
+- Low p_value indicates that the small additive model is NOT sufficient in explaining the variance of the response variable. 
+- Hence we reject the null hypothesis that H0: small additive model is sufficient in explaining the variance of the response variable.
+- We also understand that full model is more complex with 17 parameters is harder to interpret than the small model.
+- Hence **we can select the small model since the difference in RSS is very small** (`r 453.14-446.00`) **and it is comparitively easier to interpret**
 
 ### Influential points
 ```{r}
-indicies_to_exclude = unname(which(cooks.distance(bic_small_model) > 4/length(cooks.distance(bic_small_model))))
-sum(cooks.distance(bic_small_model) > 4/length(cooks.distance(bic_small_model)))
+indicies_to_exclude = unname(which(cooks.distance(bic_small_add_model) > 4/length(cooks.distance(bic_small_add_model))))
 train_data_filtered = train_data[-indicies_to_exclude,]
+#Number of excluded observations
+nrow(train_data) - nrow(train_data_filtered)
 ```
 
-### Refitting the BIC Small model without influential points
+### Refitting the BIC Small additive model without influential points
 ```{r}
 n= nrow(train_data_filtered)
-refitted_wip = lm(log(selling_price_in_10k) ~ .+ make_category*year+ make_category*max_power -make-seats-engine, data = train_data_filtered)
-                    #make_category*year*max_power + transmission + owner + seller_type + km_driven_in_10k+mileage, data = train_data_filtered)
-summary(refitted_wip)
-bic_refitted_wip = step(refitted_wip,direction="both",k=log(n),trace=0)
-summary(bic_refitted_wip)
-vif(bic_refitted_wip,type = "predictor")
-plot(bic_refitted_wip,which=c(1,2))
-bptest(bic_refitted_wip)
+refitted_bic_small_add_model = lm(formula = formula(bic_small_add_model), data = train_data_filtered)
+
+# Model summary
+summary(refitted_bic_small_add_model)
+
+#Number of parameters 
+length(coef(refitted_bic_small_add_model))
+
+#Leave one out cross validation RMSE 
+sqrt(mean((resid(refitted_bic_small_add_model) / (1 - hatvalues(refitted_bic_small_add_model))) ^ 2))
+
+# Diagnostic plots
+par(mfrow = c(1, 2))
+plot(refitted_bic_small_add_model,which=c(1,2))
+
+# Diagnostic tests
+bptest(refitted_bic_small_add_model)
+
+
+# Subset residuals for Shapiro-Wilk test (up to 5000 samples)
+residual_subset = sample(residuals(refitted_bic_small_add_model), size = 5000)
+shapiro.test(residual_subset)
+
+
+# Multicollinearity test
+vif(refitted_bic_small_add_model)
 ```
+
+<!-- We can add explanation and/or tabulation to summarize the result. 
+R^2 is better
+num of  params gone down by 1
+BP value is better, but p_value of BP test is still low
+-->
+
+#### "Interaction model" with BIC-based stepwise feature selection
+- From the above results we can see that the constant variance assumption is violated for all the above models.
+- Hence there could be some more possibilities to improve the model either through interaction terms or through predictor transformations.
+- In the following model the interactions terms are used based the results of data analysis
+
+```{r}
+bic_int_model = step(lm(selling_price_in_10k ~ year + make_category + max_power*fuel + transmission*seller_type + owner + engine, data = train_data),direction="both",k=log(n),trace=0)
+
+# Model summary
+summary(bic_int_model)
+
+#Number of parameters 
+length(coef(bic_int_model))
+
+#Leave one out cross validation RMSE 
+sqrt(mean((resid(bic_int_model) / (1 - hatvalues(bic_int_model))) ^ 2))
+
+# Diagnostic plots
+par(mfrow = c(1, 2))
+plot(bic_int_model,which=c(1,2))
+
+# Diagnostic tests
+bptest(bic_int_model)
+
+
+# Subset residuals for Shapiro-Wilk test (up to 5000 samples)
+residual_subset = sample(residuals(bic_int_model), size = 5000)
+shapiro.test(residual_subset)
+
+
+# Multicollinearity test
+vif(bic_int_model)
+```
+
+#### ANOVA of Small additive model and Interaction model 
+- We cannot compare the refitted_bic_small_add_model with interaction model because the data sets will differ and the anova test will give an error.
+```{r}
+anova(bic_small_add_model, bic_int_model)
+```
+- Statistically low p_value suggests we can reject the null hypothesis that bic_small_add_model is sufficient in explaining the response variable and the interaction model is better. 
+- Again, here the difference in the RSS of the model is very low.(`r 453.14-451.93`)
+- Hence we can go ahead with bic_small_add_model or in turn use **refitted_bic_small_add_model**, which has comparatively low test statistic of BP = 251.66 when compared to the interaction model which has a BP=378.51. (Higher the value of test statistic, lower the p_value)
+
+#### Weighted least square approach
+- In all of the above models we can see that the constant variance assumption is violated.
+- To resolve this we can try weighted linear regression approach
+- In weighted linear regression, observations with higher weights contribute more to the estimation of the regression coefficients, while observations with lower weights have less influence. 
+- This approach is often used when there is non-constant variance in the residuals or when certain observations are more reliable or important than others.
+
+```{r}
+fitted = fitted(refitted_bic_small_add_model)
+weights = 1 / (fitted^2)
+weighted_model = lm(formula=formula(refitted_bic_small_add_model),data=train_data_filtered,weights=weights)
+
+# Model summary
+summary(weighted_model)
+
+#Number of parameters 
+length(coef(weighted_model))
+
+#Leave one out cross validation RMSE 
+sqrt(mean((resid(weighted_model) / (1 - hatvalues(weighted_model))) ^ 2))
+
+# Diagnostic plots
+#par(mfrow = c(1, 2))
+plot(weighted_model,which=c(1,2))
+
+# Diagnostic tests
+bptest(weighted_model)
+
+
+# Subset residuals for Shapiro-Wilk test (up to 5000 samples)
+residual_subset = sample(residuals(weighted_model), size = 5000)
+shapiro.test(residual_subset)
+
+
+# Multicollinearity test
+vif(weighted_model)
+```
+
+<!--- R^2 has increased, BP value has come down, but p_value of BP test is still low -->
 
 ## Results
 
