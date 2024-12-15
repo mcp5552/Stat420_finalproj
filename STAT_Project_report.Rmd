@@ -1,9 +1,9 @@
 ---
 title: "Stat 420 Data Analysis Project: <br> Modeling Used Car Pricing"
 output: 
+  pdf_document: default
   html_document:
     theme: readable
-  pdf_document: default
 urlcolor: cyan
 ---
 
@@ -653,7 +653,7 @@ These variables are not statistically significantly likely to be adding predicti
 From the results of the ANOVA test comparing the two models, we see:
 
   - The interaction model has a large reduction in RSS from 3,835,608 to 1,509,381.
-  - There is highly significant improvement: F=82.2223, $p<2.2×10^{−16}$.
+  - There is highly significant improvement: F=82.2223, $p<2.2 * 10^{-16}$.
   - The interaction terms drastically improve the model fit.
 
 We can see that it appears that there may be some interaction terms that are worth including in the model.
@@ -1127,8 +1127,110 @@ For this refitted weighted least squares model without influential points:
 
 ## Results
 
+### Exploratory Data Analysis (EDA)
+The dataset includes 8,128 observations and 13 variables, with key features categorized as follows:
+
+#### Car Details
+- **Name**, **Year**, **Mileage** (fuel efficiency), **Engine Capacity** (CC), and **Max Power** (BHP).
+
+#### Market Features
+- **Selling Price** (dependent variable), **Kilometers Driven**, **Seller Type** (individual or dealer), **Fuel Type** (petrol/diesel), and **Transmission Type** (manual/automatic).
+
+#### Derived Metrics
+- **km_driven_in_10k** and **selling_price_in_10k**: Scaled metrics for better comparability.
+- **Make Category**: Cars categorized as Budget, Midrange, and Luxury.
+
+#### Outlier Exclusion
+- 127 influential points identified via Cook’s Distance were removed to stabilize model estimates.
+
+---
+
+### Correlation Analysis
+Key correlations between variables and Selling Price:
+- **Positive:**
+  - Year and Selling Price (p = 0.44): Newer cars fetch higher prices.
+  - Engine Capacity and Selling Price (p = 0.45): Larger engines generally cost more.
+  - Max Power and Selling Price (p = 0.68): Vehicles with higher power output are valued higher.
+- **Negative:**
+  - Kilometers Driven and Selling Price (p = -0.45): Higher mileage decreases resale value.
+  - Mileage (Fuel Efficiency) and Selling Price (p = -0.13): Performance vehicles with lower mileage tend to have higher prices.
+
+---
+
+### Regression Models
+#### Additive Model
+- **Formula:** selling_price_in_10k ~ year + km_driven_in_10k + fuel + seller_type + transmission + owner + fuel_efficiency + engine + max_power + seats + make_category.
+- **Fit Summary:** Adjusted R² = 0.7098; Residual Standard Error (RSE): 26.97.
+- **Diagnostics:** Heteroscedasticity (Breusch-Pagan p < 0.001) and non-normal residuals (Shapiro-Wilk p < 0.001).
+
+#### Interaction Model
+- **Formula:** Included pairwise interactions, such as year:km_driven_in_10k and year:max_power.
+- **Fit Summary:** Adjusted R² = 0.8836.
+- **Concerns:** Multicollinearity issues with high Variance Inflation Factors (VIFs).
+
+#### Weighted Least Squares (WLS)
+- **Objective:** Address heteroscedasticity.
+- **Fit Summary:** Adjusted R² = 0.8956; RSE: 0.6101.
+- **Diagnostics:** Homoscedasticity achieved (Breusch-Pagan p = 1), though residuals were not fully normal (Shapiro-Wilk p < 0.001).
+
+#### Simplified WLS Model
+- **Formula:** selling_price_in_10k ~ year + km_driven_in_10k + fuel + seats + make_category.
+- **Fit Summary:** Adjusted R² = 0.7283.
+- **Benefits:** Improved interpretability but reduced explanatory power.
+
+#### Log-Transformed WLS Model
+- **Objective:** Log-transform Selling Price to address skewness.
+- **Fit Summary:** Adjusted R² = 0.8549; Residuals showed improved normality (Shapiro-Wilk W = 0.982).
+
+---
+
+### Feature Importance
+- **Year:** Strong predictor; newer cars have higher values.
+- **Fuel Type:** Diesel cars are valued lower due to stricter emission norms.
+- **Make Category:** Luxury cars exhibit distinct pricing behavior compared to Midrange and Budget.
+- **Max Power:** Significant determinant of vehicle performance and price.
+- **Mileage:** Less significant for resale value.
+
+---
+
+### Model Comparisons
+| Model                     | Adjusted R² | AIC       | BIC       | Residual Std. Error |
+|---------------------------|--------------|-----------|-----------|---------------------|
+| Additive                  | 0.7098       | 49881.29  | 49999.61  | 27.37401            |
+| Interaction               | 0.8836       | 45142.62  | 45898.56  | Inf                 |
+| Backward AIC Interaction  | 0.8837       | 45098.50  | 45571.78  | Inf                 |
+| Backward BIC Interaction  | 0.8817       | 45163.84  | 45459.64  | Inf                 |
+
+The **WLS model with interaction terms** offered the best balance of explanatory power and stability. The simplified WLS model, while interpretable, had reduced performance.
+
+---
+
 ## Discussion
 
-## Appendix
+The WLS model with interaction terms and log-transformed Selling Price emerged as the most robust model, addressing heteroscedasticity and capturing key interactions. This model is particularly valuable for:
 
+- **Business Insight:**
+  - Mileage and year of manufacture are primary determinants of resale value.
+  - Luxury cars retain value better compared to Budget and Midrange categories.
+  - Petrol cars exhibit faster depreciation over time compared to diesel cars.
+
+- **Predictive Utility:**
+  - The model accurately predicts car selling prices, capturing nuances such as interaction effects (e.g., Year × Kilometers Driven).
+  - Log-transformation improved interpretability and residual diagnostics.
+
+- **Model Limitations:**
+  - Residual non-normality persists, suggesting potential for further improvement through non-linear models.
+
+---
+
+## Recommendations
+
+1. **Adopt the WLS Model:** Use the WLS model with interaction terms for robust predictions.
+2. **Log-Transformation:** Retain the log-transformed Selling Price for better interpretability and diagnostics.
+3. **Future Enhancements:**
+   - Explore advanced machine learning models like Random Forests or Gradient Boosting to capture non-linearities.
+   - Investigate additional features, such as geographic and seasonal trends, to enhance model performance.
+
+
+## Appendix
 
