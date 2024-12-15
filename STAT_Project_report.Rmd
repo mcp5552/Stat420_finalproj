@@ -630,30 +630,30 @@ Below, the simple additive model is expanded with terms for all interactions bet
 interaction_model <- lm(selling_price_in_10k ~ (.)^2, data = train_data)
 
 # Model summary
-print(head(coef(summary(interaction_model)), n = 50))
+print(head(coef(summary(interaction_model)), n = 300)) # change n to low value for brevity
 
 # ANOVA comparison of additive model and interaction model
 anova_comparison <- anova(additive_model, interaction_model)
 anova_comparison
 ```
 
-The interaction model:
+The interaction model has many significant interaction terms, such as:
+  - ```year:km_driven_in_10k``` (p < 0.001)
+  - ```year:fuelPetrol``` (p < 0.001)
+  - ```year:seller_typeIndividual``` (p < 0.001).
+  - ```km_driven_in_10k:transmissionManual``` (p = 0.006)
+  - ```fuelPetrol:fuel_efficiency``` (p = 0.006)
 
-  - Has terms with NA coefficients that indicate linear dependencies or collinearity in the data, making them redundant for the model, such as ```year:ownerTest Drive Car```, ```seller_typeIndividual:make_categoryMidrange```, and ```transmissionManuHasal:ownerTest Drive Car```.
-  - Has some low p-values, which are candidates for inclusion in the model
-    - ```year:km_driven_in_10k``` (p<0.001): interaction between ```year``` and ```km_driven_in_10k```.
-    - ```year:fuelPetrol``` (p<0.001): Interaction between ```year``` and ```fuelPetrol```.
-    - ```year:seller_typeIndividual``` (p<0.001): Interaction between ```year``` and ```seller_typeIndividual```.
-    - ```km_driven_in_10k:transmissionManual``` (p=0.006): Interaction between ```km_driven_in_10k``` and ```transmissionManual```.
-    - ```fuelPetrol:fuel_efficiency``` (p=0.006): Interaction between ```fuelPetrol``` and ```fuel_efficiency```.
-  - Has terms with high p-values, such as ```km_driven_in_10k:ownerFourth & Above Owner``` (p = 0.780). These variables are not statistically significantly likely to be adding predictive power to the model, and can potentially be pruned.
-```fuelPetrol:seller_typeTrustmark Dealer``` (p = 0.276).
-  - Has terms with low-magnitude coefficients, that may not be meaningfully impacting the model (such as ```fuel_efficiency:engine``` with -0.002849).
+There are some terms with high p-values, such as:
+  - ```km_driven_in_10k:ownerFourth & Above Owner``` (p = 0.780)
+  - ```fuelPetrol:seller_typeTrustmark Dealer``` (p = 0.276).
+
+These variables are not statistically significantly likely to be adding predictive power to the model, and can potentially be pruned.
 
 From the results of the ANOVA test comparing the two models, we see:
 
-  - The interaction model has a large reduction in RSS from 3835608 to 1509381.
-  - There is highly significant improvement: F=82.2227, $p<2.2×10^{−16}$.
+  - The interaction model has a large reduction in RSS from 3,835,608 to 1,509,381.
+  - There is highly significant improvement: F=82.2223, $p<2.2×10^{−16}$.
   - The interaction terms drastically improve the model fit.
 
 We can see that it appears that there may be some interaction terms that are worth including in the model.
@@ -691,13 +691,13 @@ summary_bic <- summary(backward_bic_interaction)
 significant_vars_aic <- sum(summary_aic$coefficients[, 4] < significance_level)  # p-values in the 4th column
 significant_vars_bic <- sum(summary_bic$coefficients[, 4] < significance_level) 
 
-# Print the number of statistically significant variables
+# Print the number of statistically significant variables for each model
 print(significant_vars_aic)
 print(significant_vars_bic)
 ```
 
 Observations about the AIC and BIC-pruned interaction models:
-
+  
   - The AIC model includes more interaction terms and variables than the BIC model. 
   - The estimated coefficients are different in the two models. For example, the coefficient of ```ownerFourth``` & ```Above Owner``` is 3.473e+01 in the BIC model, whereas it was 2.966e+03 in the AIC model.
   - In the AIC model, more variables are statistically significant (p-value < 0.05) compared to the BIC model
@@ -770,7 +770,7 @@ print(anova_interaction_backward_bic)
   - We can conclude that **backward BIC-based pruning improves the interaction model, but the improvement is small**. 
 
 ```{r}
-# Test 6: ANOVA comparison between backward AIC interaction moel and backward BIC interaction model:
+# Test 6: ANOVA comparison between backward AIC interaction model and backward BIC interaction model:
 print(anova_backward_aic_backward_bic)
 ```
 
@@ -830,98 +830,177 @@ Based on these results, we **select the backward AIC interaction model to be our
 
 # Check for aliased variables
 alias_results <- alias(backward_aic_interaction)
-alias_results
-
-#vif(backward_aic_interaction) 
+head(alias_results)
 ```
 
 The backward AIC interaction model has variables that are perfectly multicollinear. VIF analysis using the ```vif()``` method cannot be done until these variables are removed from the model. 
 
-Based on the ```alias()``` results, which returns perfectly-collinear variables, there are a number of terms used in the model that exhibit perfect collinearity with other terms and should be removed. 
+Based on the ```alias()``` results, which returns perfectly-collinear variables, there are 38 terms used in the model that exhibit perfect collinearity with other terms and should be removed. Note that some of these terms are interactions between specific levels of factor variables and that not all levels of those factor variables appear in equivalent interaction terms. 
 
-  - ```ownerTest Drive Car:make_categoryLuxury```
-  - ```ownerFourth & Above Owner:make_categoryMidrange```
-  - ```ownerTest Drive Car:make_categoryMidrange```
-  - ```ownerFourth & Above Owner```
-  - ```ownerSecond Owner```
-  - ```ownerTest Drive Car```
-  - ```ownerThird Owner```
-  - ```km_driven_in_10k:fuelPetrol```
-  - ```fuelPetrol:fuel_efficiency```
-  - ```fuelPetrol:seats```
-  - ```fuelPetrol:make_categoryLuxury```
-  - ```fuelPetrol:make_categoryMidrange```
-  - ```seller_typeIndividual```
-  - ```seller_typeTrustmark Dealer```
-  - ```seller_typeIndividual:fuel_efficiency```
-  - ```seller_typeTrustmark Dealer:fuel_efficiency```
-  - ```transmissionManual```
-  - ```transmissionManual:ownerFourth & Above Owner```
-  - ```transmissionManual:ownerSecond Owner```
-  - ```transmissionManual:ownerTest Drive Car```
-  - ```transmissionManual:ownerThird Owner```
-  - ```transmissionManual:engine```
-  - ```transmissionManual:make_categoryLuxury```
-  - ```transmissionManual:make_categoryMidrange```
-  - ```transmissionManual:fuel_efficiency```
-  - ```transmissionManual:seats```
-  - ```engine```
-  - ```max_power```
-  - ```fuel_efficiency```
-  - ```fuel_efficiency:engine```
-  - ```fuel_efficiency:max_power```
-  - ```fuel_efficiency:seats```
-  - ```fuel_efficiency:make_category```
-  - ```engine:max_power```
-  - ```engine:make_category```
-  - ```max_power:seats```
-  - ```max_power:make_category```
-  - ```seats:make_category```
+  1. ```ownerTest Drive Car:make_categoryLuxury```
+  2. ```ownerFourth & Above Owner:make_categoryMidrange```
+  3. ```ownerTest Drive Car:make_categoryMidrange```
+  4. ```ownerFourth & Above Owner```
+  5. ```ownerSecond Owner```
+  6. ```ownerTest Drive Car```
+  7. ```ownerThird Owner```
+  8. ```km_driven_in_10k:fuelPetrol```
+  9. ```fuelPetrol:fuel_efficiency```
+  10. ```fuelPetrol:seats```
+  11. ```fuelPetrol:make_categoryLuxury```
+  12. ```fuelPetrol:make_categoryMidrange```
+  13. ```seller_typeIndividual```
+  14. ```seller_typeTrustmark Dealer```
+  15. ```seller_typeIndividual:fuel_efficiency```
+  16. ```seller_typeTrustmark Dealer:fuel_efficiency```
+  17. ```transmissionManual```
+  18. ```transmissionManual:ownerFourth & Above Owner```
+  19. ```transmissionManual:ownerSecond Owner```
+  20. ```transmissionManual:ownerTest Drive Car```
+  21. ```transmissionManual:ownerThird Owner```
+  22. ```transmissionManual:engine```
+  23. ```transmissionManual:make_categoryLuxury```
+  24. ```transmissionManual:make_categoryMidrange```
+  25. ```transmissionManual:fuel_efficiency```
+  26. ```transmissionManual:seats```
+  27. ```engine```
+  28. ```max_power```
+  29. ```fuel_efficiency```
+  30. ```fuel_efficiency:engine```
+  31. ```fuel_efficiency:max_power```
+  32. ```fuel_efficiency:seats```
+  33. ```fuel_efficiency:make_category```
+  34. ```engine:max_power```
+  35. ```engine:make_category```
+  36. ```max_power:seats```
+  37. ```max_power:make_category```
+  38. ```seats:make_category```
+
+With these 38 variables removed, the model is reduced from 75 to 37 variables:
+  
+  1. ```(Intercept)```
+  2. ```year```
+  3. ```km_driven_in_10k```
+  4. ```fuelPetrol```
+  5. ```seats```
+  6. ```make_categoryLuxury```
+  7. ```make_categoryMidrange```
+  8. ```year:km_driven_in_10k```
+  9. ```year:fuelPetrol```
+  10. ```year:seller_typeIndividual```
+  11. ```year:seller_typeTrustmark Dealer```
+  12. ```year:transmissionManual```
+  13. ```year:ownerFourth & Above Owner```
+  14. ```year:ownerSecond Owner```
+  15. ```year:ownerTest Drive Car```
+  16. ```year:ownerThird Owner```
+  17. ```year:max_power```
+  18. ```year:make_categoryLuxury```
+  19. ```year:make_categoryMidrange```
+  20. ```km_driven_in_10k:transmissionManual```
+  21. ```km_driven_in_10k:fuel_efficiency```
+  22. ```km_driven_in_10k:max_power```
+  23. ```km_driven_in_10k:seats```
+  24. ```km_driven_in_10k:make_categoryLuxury```
+  25. ```km_driven_in_10k:make_categoryMidrange```
+  26. ```seller_typeIndividual:engine```
+  27. ```seller_typeTrustmark Dealer:engine```
+  28. ```ownerFourth & Above Owner:fuel_efficiency```
+  29. ```ownerSecond Owner:fuel_efficiency```
+  30. ```ownerTest Drive Car:fuel_efficiency```
+  31. ```ownerThird Owner:fuel_efficiency```
+  32. ```ownerFourth & Above Owner:make_categoryLuxury```
+  33. ```ownerSecond Owner:make_categoryLuxury```
+  34. ```ownerThird Owner:make_categoryLuxury```
+  35. ```fuel_efficiency:make_categoryLuxury```
+  36. ```fuel_efficiency:make_categoryMidrange```
+  37. ```engine:make_categoryLuxury```
+
 
 Fitting the model again without these variables:
 ```{r}
-# Revised model excluding the collinear terms
+# Original formula from the model
+original_formula <- selling_price_in_10k ~ year + km_driven_in_10k + 
+    fuel + seller_type + transmission + owner + fuel_efficiency + 
+    engine + max_power + seats + make_category + year:km_driven_in_10k + 
+    year:fuel + year:seller_type + year:transmission + year:owner + 
+    year:max_power + year:make_category + km_driven_in_10k:transmission + 
+    km_driven_in_10k:fuel_efficiency + km_driven_in_10k:max_power + 
+    km_driven_in_10k:seats + km_driven_in_10k:make_category + 
+    fuel:fuel_efficiency + fuel:seats + fuel:make_category + 
+    seller_type:fuel_efficiency + seller_type:engine + transmission:owner + 
+    transmission:engine + transmission:make_category + owner:fuel_efficiency + 
+    owner:make_category + fuel_efficiency:engine + fuel_efficiency:max_power + 
+    fuel_efficiency:seats + fuel_efficiency:make_category + engine:max_power + 
+    engine:make_category + max_power:seats + max_power:make_category + 
+    seats:make_category
 
-# In order to specify interaction terms for categorical variables, you need to make dummy variables for them
+# Generate the design matrix
+X <- model.matrix(original_formula, data = train_data) # has 75 cols, #1 is "(Intercept)"
 
-# revised__aic_interaction <- lm(selling_price_in_10k ~ year + km_driven_in_10k + fuel + seller_type +
-#                     transmission + owner + year:km_driven_in_10k + year:fuel +
-#                     year:seller_type + year:transmission + year:make_category +
-#                     km_driven_in_10k:transmission + km_driven_in_10k:fuel_efficiency +
-#                     km_driven_in_10k:make_category + fuel:fuel_efficiency + fuel:make_category +
-#                     seller_type:fuel_efficiency + seller_type:engine + transmission:owner +
-#                     transmission:engine + owner:fuel_efficiency + owner:make_category +
-#                     fuel_efficiency:engine + fuel_efficiency:max_power +
-#                     fuel_efficiency:make_category + engine:max_power + engine:make_category + 
-#                     max_power:seats + seats:make_category + 
-#                     transmissionManual:fuel_efficiency + 
-#                     transmissionManual:engine + 
-#                     transmissionManual:seats + 
-#                     transmissionManual:make_categoryLuxury + 
-#                     transmissionManual:make_categoryMidrange, data = train_data)
+# Remove the columns corresponding to the problematic terms from the design matrix X
+# Define the list of correct variables (excluding "(Intercept)" since it's not used in model fitting)
+vars <- c(
+    "year", "km_driven_in_10k", "fuelPetrol", "seats", "make_categoryLuxury", 
+    "make_categoryMidrange", "year:km_driven_in_10k", "year:fuelPetrol", 
+    "year:seller_typeIndividual", "year:seller_typeTrustmark Dealer", 
+    "year:transmissionManual", "year:ownerFourth & Above Owner", 
+    "year:ownerSecond Owner", "year:ownerTest Drive Car", "year:ownerThird Owner", 
+    "year:max_power", "year:make_categoryLuxury", "year:make_categoryMidrange", 
+    "km_driven_in_10k:transmissionManual", "km_driven_in_10k:fuel_efficiency", 
+    "km_driven_in_10k:max_power", "km_driven_in_10k:seats", "km_driven_in_10k:make_categoryLuxury", 
+    "km_driven_in_10k:make_categoryMidrange", "seller_typeIndividual:engine", 
+    "seller_typeTrustmark Dealer:engine", "ownerFourth & Above Owner:fuel_efficiency", 
+    "ownerSecond Owner:fuel_efficiency", "ownerTest Drive Car:fuel_efficiency", 
+    "ownerThird Owner:fuel_efficiency", "ownerFourth & Above Owner:make_categoryLuxury", 
+    "ownerSecond Owner:make_categoryLuxury", "ownerThird Owner:make_categoryLuxury", 
+    "fuel_efficiency:make_categoryLuxury", "fuel_efficiency:make_categoryMidrange",
+    "engine:make_categoryLuxury"
+)
 
-# Check again for aliased variables
-#alias_results <- alias(revised_backward_aic_interaction)
-#alias_results
+# Ensure the cleaned design matrix includes only the correct variables
+X_cleaned <- X[, colnames(X) %in% vars]
+str(X_cleaned)
+
+# Fit the new model
+revised_backward_aic_interaction <- lm(selling_price_in_10k ~ X_cleaned , data = train_data)
+
+# Output model summary
+summary(revised_backward_aic_interaction)
+
+# Check for aliased variables again (this will return an empty table if all perfectly collinear variables were removed)
+alias_results <- alias(revised_backward_aic_interaction)
+alias_results
 ```
 
+##### Comparison of Backwards AIC Interaction Models Before and After Removing Collinearity
+```{r}
+anova(backward_aic_interaction, revised_backward_aic_interaction)
+```
+
+  - The F-statistic for the comparison between the models is 66.166. This is a very large value, suggesting a significant difference between the models.
+  - The revised model performs worse in terms of RSS, with a value of 2,177,296 vs 1,521,380 for the model with collinearity. 
+  - Adjusted R-squared in the revised model (0.8347) is very close to the original adjusted R-squared, so the loss of collinear variables has not drastically reduced the model's explanatory power.
+  - The p-value is < 2.2e-16, which is highly significant. This means that the difference between the two models is statistically significant, and the revised model with the removed collinear variables is significantly different from the original model.
+
+##### More Diagnostics for Revised Backwards AIC Interaction Model
 ```{r}
 # VIF test (can only be performed once all perfectly multicollinear variables are removed)
+# This method is not working due to the use of the design matrix (produces error "! model contains fewer than 2 terms") 
 # vif(revised_backward_aic_interaction)
 ```
 
-##### Other Diagnostics
 ```{r}
 # Diagnostic plots
 par(mfrow = c(1, 2))
-plot(backward_aic_interaction, which=c(1,2))
+plot(revised_backward_aic_interaction, which=c(1,2))
 
 # Diagnostic tests
-bp_test <- bptest(backward_aic_interaction)
+bp_test <- bptest(revised_backward_aic_interaction)
 print(bp_test)
 
 # Subset residuals for Shapiro-Wilk test (up to 5000 samples)
-residual_subset = sample(residuals(backward_aic_interaction), size = 5000)
+residual_subset = sample(residuals(revised_backward_aic_interaction), size = 5000)
 shapiro_test = shapiro.test(residual_subset)
 print(shapiro_test)
 ```
@@ -929,436 +1008,127 @@ print(shapiro_test)
 From the above diagnostics, it is clear that there are assumption violations in the model still. 
 
 #### Addressing Heteroscedasticity
-<!-- ##### Log Transformation of Reponse Variable -->
-<!-- ```{r} -->
-<!-- # Try log response of selling_price -->
-<!-- # Add column for log of response -->
-<!-- train_data$log_selling_price_in_10k = log(train_data$selling_price_in_10k) -->
-<!-- test_data$log_selling_price_in_10k = log(test_data$selling_price_in_10k) -->
+##### Log Transformation of Reponse Variable
+```{r}
+# Add column for log of response
+train_data$log_selling_price_in_10k = log(train_data$selling_price_in_10k)
+test_data$log_selling_price_in_10k = log(test_data$selling_price_in_10k)
 
+# Fit the new model with log transformation of response
+log_revised_backward_aic_interaction <- lm(log_selling_price_in_10k  ~ X_cleaned , data = train_data)
 
-<!-- ``` -->
+# Output summary of model
+summary(log_revised_backward_aic_interaction)
+
+# Diagnostic plots
+par(mfrow = c(1, 2))
+plot(log_revised_backward_aic_interaction , which=c(1,2))
+
+# Diagnostic tests
+bp_test <- bptest(log_revised_backward_aic_interaction)
+print(bp_test)
+
+# Subset residuals for Shapiro-Wilk test (up to 5000 samples)
+residual_subset = sample(residuals(log_revised_backward_aic_interaction), size = 5000)
+shapiro_test = shapiro.test(residual_subset)
+print(shapiro_test)
+```
+
+For this model:
+
+  - The BP test is significant (p-value < 2.2e-16), suggesting heteroscedasticity is still present in the model, despite the log transformation. This implies that the log transformation did not fully resolve the issue of heteroscedasticity in the residuals.
+  - The Shapiro-Wilk test shows that the residuals do not follow a normal distribution (p-value < 2.2e-16). 
 
 ##### Weighted Least Squares (WLS) regression
-<!-- ```{r} -->
-<!-- # Try weighted least squares (wls) regression -->
-<!-- # Get the fitted values for the full model -->
-<!-- fitted_full_model = fitted(full_model) -->
-
-<!-- # Compute the weights based on the fitted values (inverse of the squared fitted values) -->
-<!-- weights = 1 / (fitted_full_model^2) -->
-
-<!-- # Weighted least squares model using the full model formula and the computed weights -->
-<!-- weighted_model = lm(formula = formula(full_model), data = train_data, weights = weights) -->
-
-<!-- # Model summary -->
-<!-- summary(weighted_model) -->
-
-<!-- ``` -->
-
-##### Comparison of log transformation of response and wls regression
-``` {r}
-# Compare the two methods of dealing with heteroscedasticity
-
-```
-
- 
-#### Refitting the Model Without Influential Points
 ```{r}
-# Remove influential points and refit best model
+# Calculate weights 
+fitted_values <- fitted(revised_backward_aic_interaction)  # Fitted values from a previous model
+weights <- 1 / (fitted_values^2)
 
+# Combine response and predictors into a single data frame
+train_data_wls <- cbind(data.frame(selling_price_in_10k = train_data$selling_price_in_10k), X_cleaned)
+
+# Fit the WLS model
+weighted_model <- lm(selling_price_in_10k ~ ., data = train_data_wls, weights = weights)
+
+# Model summary
+summary(weighted_model)
+
+# Diagnostic plots
+par(mfrow = c(1, 2))
+plot(weighted_model, which = c(1, 2))
+
+# Diagnostic tests
+bp_test <- bptest(weighted_model)
+print(bp_test)
+
+# Subset residuals for Shapiro-Wilk test (up to 5000 samples)
+residual_subset <- sample(residuals(weighted_model), size = 5000)
+shapiro_test <- shapiro.test(residual_subset)
+print(shapiro_test)
 ```
 
-
-
-
-
-<!-- # Old code is here for now (copy pased from old version) -->
-
-<!-- # Subset out influential points and redo the model -->
-
-<!-- # Fit the bic_int_model on the dataset with influential points removed (train_data_filtered) -->
-<!-- #bic_int_model_refitted = step(lm(selling_price_in_10k ~ year + make_category + max_power*fuel + transmission*seller_type + owner + engine, data = train_data_filtered), direction="both", k=log(n), trace=0) -->
-
-<!-- # Model summary -->
-<!-- #summary(bic_int_model_refitted) -->
-
-<!-- ``` -->
-
-<!-- ``` {r} -->
-<!-- # Check if WLS regression fixes the full_add_model more than log transformation of the response -->
-
-<!-- # Get the fitted values for the full model -->
-<!-- fitted_full_model = fitted(full_model) -->
-
-<!-- # Compute the weights based on the fitted values (inverse of the squared fitted values) -->
-<!-- weights = 1 / (fitted_full_model^2) -->
-
-<!-- # Weighted least squares model using the full model formula and the computed weights -->
-<!-- weighted_model = lm(formula = formula(full_model), data = train_data, weights = weights) -->
-
-<!-- # Model summary -->
-<!-- summary(weighted_model) -->
-
-
-<!-- # Diagnostics for WLS Model: -->
-
-<!-- # 1. Residuals vs Fitted Plot (check for homoscedasticity) -->
-<!-- par(mfrow = c(1, 2)) -->
-<!-- plot(weighted_model, which = 1)  # Residuals vs Fitted -->
-
-<!-- # 2. Normal Q-Q Plot (check for normality of residuals) -->
-<!-- plot(weighted_model, which = 2)  # Normal Q-Q -->
-
-<!-- # 3. Breusch-Pagan test for heteroscedasticity -->
-<!-- bp_test = bptest(weighted_model) -->
-<!-- cat("Breusch-Pagan Test for Heteroscedasticity:\n") -->
-<!-- print(bp_test) -->
-
-<!-- # 4. Shapiro-Wilk test for normality of residuals -->
-<!-- # Subset residuals for Shapiro-Wilk test (up to 5000 samples) -->
-<!-- residual_subset_weighted_model = sample(residuals(weighted_model), size = 5000) -->
-<!-- # Perform Shapiro-Wilk test on the subset of residuals -->
-<!-- shapiro_test_weighted_model = shapiro.test(residual_subset_weighted_model) -->
-<!-- cat("Shapiro-Wilk Normality Test for Residuals (Weighted Model):\n") -->
-<!-- print(shapiro_test_weighted_model) -->
-
-<!-- # 5. Variance Inflation Factor (VIF) for multicollinearity -->
-<!-- vif_test = vif(weighted_model) -->
-<!-- cat("Variance Inflation Factors (VIF) for Multicollinearity:\n") -->
-<!-- print(vif_test) -->
-
-<!-- # 6. Leave-One-Out Cross-Validation RMSE (for model comparison) -->
-<!-- rmse_weighted_model = sqrt(mean((resid(weighted_model) / (1 - hatvalues(weighted_model)))^2)) -->
-<!-- cat("Leave-One-Out Cross-Validation RMSE for Weighted Model:\n") -->
-<!-- print(rmse_weighted_model) -->
-
-<!-- ``` -->
-
-<!-- #### Logarithmic transformation of response variable -->
-
-<!-- - From the previous Fitted vs Residual plot we can see there is a pattern in the residuals and the constant assumption is violated. -->
-<!-- - Logarithmic transformation can make the positively skewed distribution of selling price to be normally distributed and makes it more suitable for model building and for stabilizing the variance. -->
-
-<!-- ```{r} -->
-<!-- train_data$selling_price_in_10k = log(train_data$selling_price_in_10k) -->
-<!-- test_data$selling_price_in_10k = log(test_data$selling_price_in_10k) -->
-<!-- ``` -->
-
-
-<!-- #### Additive "full" linear model (using all available predictors except ```make```) | with BIC -->
-<!-- ```{r} -->
-<!-- # Definition of "full" linear model with BIC-based stepwise model selection starting from full model (both directions) -->
-<!-- n= nrow(train_data) -->
-<!-- bic_full_add_model = step(lm(selling_price_in_10k ~ .-make, data = train_data),direction="both",k=log(n),trace=0) -->
-
-<!-- # Model summary -->
-<!-- summary(bic_full_add_model) -->
-
-<!-- #Number of parameters -->
-<!-- length(coef(bic_full_add_model)) -->
-
-<!-- #Leave one out cross validation RMSE -->
-<!-- sqrt(mean((resid(bic_full_add_model) / (1 - hatvalues(bic_full_add_model))) ^ 2)) -->
-
-<!-- # Diagnostic plots -->
-<!-- par(mfrow = c(1, 2)) -->
-<!-- plot(bic_full_add_model,which=c(1,2)) -->
-
-<!-- # Diagnostic tests -->
-<!-- bp_test = bptest(bic_full_add_model) -->
-<!-- print(bp_test) -->
-
-<!-- # Subset residuals for Shapiro-Wilk test (up to 5000 samples) -->
-<!-- residual_subset = sample(residuals(bic_full_add_model), size = 5000) -->
-<!-- shapiro_test = shapiro.test(residual_subset) -->
-<!-- print(shapiro_test) -->
-
-<!-- # Multicollinearity test -->
-<!-- vif(bic_full_add_model) -->
-<!-- ``` -->
-
-<!-- ``` {r} -->
-<!-- # Comparing log transformation of the reponse to WLS regression -->
-<!-- # Perform ANOVA to compare weighted_model and bic_full_add_model -->
-<!-- anova_comparison <- anova(weighted_model, bic_full_add_model) -->
-
-<!-- # Display the ANOVA comparison results -->
-<!-- anova_comparison -->
-<!-- ``` -->
-
-<!-- <!-- The WLS model outperforms the log-transformed model based on multiple criteria: --> -->
-
-<!-- <!--     It has a higher R-squared value, indicating a better fit to the data. --> -->
-<!-- <!--     The residual diagnostics (Shapiro-Wilk and Breusch-Pagan tests) suggest that the WLS model addresses heteroscedasticity better than the log-transformed model, although there are still some issues with normality. --> -->
-<!-- <!--     The ANOVA test confirms that the WLS model is a better fit for the data, as indicated by a much lower RSS. --> -->
-
-<!-- |                                                              | Adjusted R^2 | Number of <br>parameters | Breusch-Pagan test                                         | Shapiro-Wilk test<br>(with 5k sample residuals)   | VIF>5 | Non significant <br>predictors(pvalue > 0.05) | LOOCV<br>RMSE | -->
-<!-- |--------------------------------------------------------------|--------------|--------------------------|------------------------------------------------------------|---------------------------------------------------|-------|-----------------------------------------------|---------------| -->
-<!-- | Full additive model with BIC<br>(Excluding "make" predictor) | 0.8469423    | 17                       | Constant variance assumption <br>violated with BP = 372.41 | Normality assumption violated<br>with W = 0.98173 | None  | seller_typeTrustmark Dealer                   | 0.2914511     | -->
-<!-- |                                                              |              |                          |                                                            |                                                   |       |                                               |               | -->
-
-<!-- - The "full" linear model has a high $R^2$ value of 0.8469423, indicating that 84.69% of the variance in ```selling_price_in_10k``` is explained by the predictors. -->
-
-<!-- - Most predictors are statistically significant (p-value < 0.05), suggesting they contribute meaningfully to the model. -->
-<!-- Except  ```seller_typeTrustmark Dealer``` (p = 0.165779) -->
-
-<!-- - Diagnostic testing for this model: -->
-<!--   - The Breusch-Pagan test yielded a very high test statistic of 372.41 and a p-value less than $2.2*10^{-16}$ which rejects the null hypothesis that constant variance exists in residuals -->
-
-<!--   - The Shapiro-Wilk test with 5000 sample residuals yielded a low p-value less than $2.2*10^{-16}$, which rejects the null hypothesis that the residuals are normally distributed. -->
-
-<!-- <!-- We can add explanation and/or tabulation to summarize the result --> -->
-
-<!-- #### "Small additive model" with BIC-based stepwise feature selection -->
-<!-- ```{r} -->
-<!-- bic_small_add_model = step(lm(selling_price_in_10k ~ year + make_category + max_power + transmission + fuel + seller_type + owner +engine, data = train_data),direction="both",k=log(n),trace=0) -->
-
-<!-- # Model summary -->
-<!-- summary(bic_small_add_model) -->
-
-<!-- #Number of parameters -->
-<!-- length(coef(bic_small_add_model)) -->
-
-<!-- #Leave one out cross validation RMSE -->
-<!-- sqrt(mean((resid(bic_small_add_model) / (1 - hatvalues(bic_small_add_model))) ^ 2)) -->
-
-<!-- # Diagnostic plots -->
-<!-- par(mfrow = c(1, 2)) -->
-<!-- plot(bic_small_add_model,which=c(1,2)) -->
-
-<!-- # Diagnostic tests -->
-<!-- bptest(bic_small_add_model) -->
-
-
-<!-- # Subset residuals for Shapiro-Wilk test (up to 5000 samples) -->
-<!-- residual_subset = sample(residuals(bic_small_add_model), size = 5000) -->
-<!-- shapiro.test(residual_subset) -->
-
-
-<!-- # Multicollinearity test -->
-<!-- vif(bic_small_add_model) -->
-<!-- ``` -->
-
-
-<!-- #### ANOVA of Small and Full additive models -->
-<!-- ```{r} -->
-<!-- anova(bic_small_add_model, bic_full_add_model) -->
-<!-- ``` -->
-
-<!-- - From the above Analysis of Variance(ANOVA) result we can say that Full additive model is statistically better than small additive model, based on the high F-test low p_value and lower RSS. -->
-<!-- - Full additive model has lower RSS (446.00) than small additive model (453.14), indicating that full additive model fits the data better. -->
-<!-- - Low p_value indicates that the small additive model is NOT sufficient in explaining the variance of the response variable. -->
-<!-- - Hence we reject the null hypothesis that H0: small additive model is sufficient in explaining the variance of the response variable. -->
-<!-- - We also understand that full model is more complex with 17 parameters is harder to interpret than the small model. -->
-<!-- - Hence **we can select the small model since the difference in RSS is very small** (`r 453.14-446.00`) **and it is comparitively easier to interpret** -->
-
-<!-- ### Influential points -->
-<!-- ```{r} -->
-<!-- indicies_to_exclude = unname(which(cooks.distance(bic_small_add_model) > 4/length(cooks.distance(bic_small_add_model)))) -->
-<!-- train_data_filtered = train_data[-indicies_to_exclude,] -->
-<!-- #Number of excluded observations -->
-<!-- nrow(train_data) - nrow(train_data_filtered) -->
-<!-- ``` -->
-
-<!-- ### Refitting the BIC Small additive model without influential points -->
-<!-- ```{r} -->
-<!-- n= nrow(train_data_filtered) -->
-<!-- refitted_bic_small_add_model = lm(formula = formula(bic_small_add_model), data = train_data_filtered) -->
-
-<!-- # Model summary -->
-<!-- summary(refitted_bic_small_add_model) -->
-
-<!-- #Number of parameters -->
-<!-- length(coef(refitted_bic_small_add_model)) -->
-
-<!-- #Leave one out cross validation RMSE -->
-<!-- sqrt(mean((resid(refitted_bic_small_add_model) / (1 - hatvalues(refitted_bic_small_add_model))) ^ 2)) -->
-
-<!-- # Diagnostic plots -->
-<!-- par(mfrow = c(1, 2)) -->
-<!-- plot(refitted_bic_small_add_model,which=c(1,2)) -->
-
-<!-- # Diagnostic tests -->
-<!-- bptest(refitted_bic_small_add_model) -->
-
-
-<!-- # Subset residuals for Shapiro-Wilk test (up to 5000 samples) -->
-<!-- residual_subset = sample(residuals(refitted_bic_small_add_model), size = 5000) -->
-<!-- shapiro.test(residual_subset) -->
-
-
-<!-- # Multicollinearity test -->
-<!-- vif(refitted_bic_small_add_model) -->
-<!-- ``` -->
-
-<!-- <!-- We can add explanation and/or tabulation to summarize the result. -->
-<!-- R^2 is better -->
-<!-- num of  params gone down by 1 -->
-<!-- BP value is better, but p_value of BP test is still low -->
-<!-- --> -->
-
-<!-- #### "Interaction model" with BIC-based stepwise feature selection -->
-
-<!-- - From the above results we can see that the constant variance assumption is violated for all the above models. -->
-<!-- - Hence there could be some more possibilities to improve the model either through interaction terms or through predictor transformations. -->
-<!-- - In the following model the interactions terms are used based the results of data analysis -->
-
-<!-- ```{r} -->
-<!-- bic_int_model = step(lm(selling_price_in_10k ~ year + make_category + max_power*fuel + transmission*seller_type + owner + engine, data = train_data),direction="both",k=log(n),trace=0) -->
-
-<!-- # Model summary -->
-<!-- summary(bic_int_model) -->
-
-<!-- #Number of parameters -->
-<!-- length(coef(bic_int_model)) -->
-
-<!-- #Leave one out cross validation RMSE -->
-<!-- sqrt(mean((resid(bic_int_model) / (1 - hatvalues(bic_int_model))) ^ 2)) -->
-
-<!-- # Diagnostic plots -->
-<!-- par(mfrow = c(1, 2)) -->
-<!-- plot(bic_int_model,which=c(1,2)) -->
-
-<!-- # Diagnostic tests -->
-<!-- bptest(bic_int_model) -->
-
-
-<!-- # Subset residuals for Shapiro-Wilk test (up to 5000 samples) -->
-<!-- residual_subset = sample(residuals(bic_int_model), size = 5000) -->
-<!-- shapiro.test(residual_subset) -->
-
-
-<!-- # Multicollinearity test -->
-<!-- vif(bic_int_model) -->
-<!-- ``` -->
-
-<!-- ```{r} -->
-<!-- # bic_int_model_refitted -->
-
-<!-- # Fit the bic_int_model on the dataset with influential points removed (train_data_filtered) -->
-<!-- bic_int_model_refitted = step(lm(selling_price_in_10k ~ year + make_category + max_power*fuel + transmission*seller_type + owner + engine, -->
-<!--                                  data = train_data_filtered), direction="both", k=log(n), trace=0) -->
-
-<!-- # Model summary -->
-<!-- summary(bic_int_model_refitted) -->
-<!-- ``` -->
-
-<!-- #### ANOVA of Small additive model and Interaction model -->
-<!-- - We cannot compare the refitted_bic_small_add_model with interaction model because the data sets will differ and the anova test will give an error. -->
-<!-- ```{r} -->
-<!-- anova(bic_small_add_model, bic_int_model) -->
-<!-- ``` -->
-<!-- - Statistically low p_value suggests we can reject the null hypothesis that bic_small_add_model is sufficient in explaining the response variable and the interaction model is better. -->
-<!-- - Again, here the difference in the RSS of the model is very low.(`r 453.14-451.93`) -->
-<!-- - Hence we can go ahead with bic_small_add_model or in turn use **refitted_bic_small_add_model**, which has comparatively low test statistic of BP = 251.66 when compared to the interaction model which has a BP=378.51. (Higher the value of test statistic, lower the p_value) -->
-
-<!-- #### Weighted least square approach -->
-<!-- - In all of the above models we can see that the constant variance assumption is violated. -->
-<!-- - To resolve this we can try weighted linear regression approach -->
-<!-- - In weighted linear regression, observations with higher weights contribute more to the estimation of the regression coefficients, while observations with lower weights have less influence. -->
-<!-- - This approach is often used when there is non-constant variance in the residuals or when certain observations are more reliable or important than others. -->
-
-<!-- ```{r} -->
-<!-- # Try making refitted versions of full additive model, interacitve model, and wls model using the dataset with the influential points removed -->
-<!-- # Refit full_add_model on the filtered dataset -->
-<!-- refitted_full_add_model <- lm(selling_price_in_10k ~ (make + year + km_driven_in_10k + fuel + -->
-<!--                                                      seller_type + transmission + owner + fuel_efficiency + -->
-<!--                                                      engine + max_power + seats + make_category) - make, -->
-<!--                                data = train_data_filtered) -->
-
-<!-- # Refit bic_int_model on the filtered dataset -->
-<!-- refitted_bic_int_model <- lm(selling_price_in_10k ~ year + make_category + max_power + transmission + -->
-<!--                               fuel + seller_type + owner + engine + -->
-<!--                               fuel_efficiency + km_driven_in_10k + seats, -->
-<!--                               data = train_data_filtered) -->
-
-<!-- # Refit weighted_model on the filtered dataset -->
-<!-- refitted_weighted_model <- lm(selling_price_in_10k ~ year + make_category + max_power + transmission + -->
-<!--                                fuel + seller_type + owner + engine, -->
-<!--                                data = train_data_filtered, weights = train_data_filtered$weight_variable)  # Replace "weight_variable" with the appropriate column for weights -->
-
-<!-- # Output model summaries -->
-<!-- summary(refitted_full_add_model) -->
-<!-- summary(refitted_bic_int_model) -->
-<!-- summary(refitted_weighted_model) -->
-
-<!-- ``` -->
-
-
-
-<!-- ```{r} -->
-<!-- fitted = fitted(refitted_bic_small_add_model) -->
-<!-- weights = 1 / (fitted^2) -->
-<!-- weighted_model = lm(formula=formula(refitted_bic_small_add_model),data=train_data_filtered,weights=weights) -->
-
-<!-- # Model summary -->
-<!-- summary(weighted_model) -->
-
-<!-- #Number of parameters -->
-<!-- length(coef(weighted_model)) -->
-
-<!-- #Leave one out cross validation RMSE -->
-<!-- sqrt(mean((resid(weighted_model) / (1 - hatvalues(weighted_model))) ^ 2)) -->
-
-<!-- # Diagnostic plots -->
-<!-- #par(mfrow = c(1, 2)) -->
-<!-- plot(weighted_model,which=c(1,2)) -->
-
-<!-- # Diagnostic tests -->
-<!-- bptest(weighted_model) -->
-
-
-<!-- # Subset residuals for Shapiro-Wilk test (up to 5000 samples) -->
-<!-- residual_subset = sample(residuals(weighted_model), size = 5000) -->
-<!-- shapiro.test(residual_subset) -->
-
-
-<!-- # Multicollinearity test -->
-<!-- vif(weighted_model) -->
-<!-- ``` -->
-
-<!-- <!--- R^2 has increased, BP value has come down, but p_value of BP test is still low --> -->
-
-<!-- ```{r} -->
-
-<!-- # Compute AIC and BIC for all models -->
-<!-- model_comparisons <- data.frame( -->
-<!--   Model = c("full_model", "bic_full_add_model", "bic_small_add_model", -->
-<!--             "refitted_bic_small_add_model", "bic_int_model", "weighted_model", -->
-<!--             "refitted_full_add_model", "refitted_bic_int_model", -->
-<!--             "refitted_weighted_model", "bic_int_model_refitted"),  # Added new model here -->
-<!--   AIC = c(AIC(full_model), AIC(bic_full_add_model), AIC(bic_small_add_model), -->
-<!--           AIC(refitted_bic_small_add_model), AIC(bic_int_model), AIC(weighted_model), -->
-<!--           AIC(refitted_full_add_model), AIC(refitted_bic_int_model), -->
-<!--           AIC(refitted_weighted_model), AIC(bic_int_model_refitted)),  # AIC for the new model -->
-<!--   BIC = c(BIC(full_model), BIC(bic_full_add_model), BIC(bic_small_add_model), -->
-<!--           BIC(refitted_bic_small_add_model), BIC(bic_int_model), BIC(weighted_model), -->
-<!--           BIC(refitted_full_add_model), BIC(refitted_bic_int_model), -->
-<!--           BIC(refitted_weighted_model), BIC(bic_int_model_refitted))  # BIC for the new model -->
-<!-- ) -->
-
-<!-- # Display the results -->
-<!-- model_comparisons -->
-
-<!-- # Perform ANOVA for all models -->
-<!-- anova_comparison <- anova( -->
-<!--   refitted_bic_small_add_model, -->
-<!--   refitted_full_add_model, -->
-<!--   refitted_bic_int_model, -->
-<!--   refitted_weighted_model, -->
-<!--   bic_int_model_refitted -->
-<!-- ) -->
-
-<!-- anova_comparison -->
-
-<!-- ``` -->
-
-
-<!-- ## Results -->
-
-<!-- ## Discussion -->
-
-<!-- ## Appendix -->
+For this model:
+
+  - The Adjusted R-squared value of 0.8949 suggests the model explains nearly 89.5% of the variance in the dependent variable, which is a strong fit.
+  - The BP test is not significant (p-value is 1), indicating that there is not evidence of heteroscedasticity.
+  - The Shapiro-Wilk test results show a p-value < 2.2e-16, indicating that the residuals are significantly non-normal. 
+  
+  Because this model is able to pass the BP test, we **select the WLS model as our best model** for this stage. 
+ 
+##### Removing Influential Points
+```{r}
+# Remove influential points and refit best model from previous steps
+# Compute Cook's distances for the weighted model
+cooks_distances <- cooks.distance(weighted_model)
+
+# Identify influential points (Cook's distance > 4/n)
+influential_indices <- which(cooks_distances > 4 / length(cooks_distances))
+
+# Remove influential points from both the design matrix and response
+X_cleaned_filtered <- X_cleaned[-influential_indices, ]
+selling_price_filtered <- train_data$selling_price_in_10k[-influential_indices]
+weights_filtered <- weights[-influential_indices]
+
+# Check number of excluded observations
+length(influential_indices)
+```
+
+  - 127 observations are excluded from this refitted model. 
+
+```{r}
+# Refit the WLS model with filtered data
+refitted_weighted_model <- lm(selling_price_filtered ~ X_cleaned_filtered, weights = weights_filtered)
+
+# Model summary
+summary(refitted_weighted_model)
+
+# Diagnostic plots
+par(mfrow = c(1, 2))
+plot(refitted_weighted_model, which = c(1, 2))
+
+# Diagnostic tests
+bp_test <- bptest(refitted_weighted_model)
+print(bp_test)
+
+# Subset residuals for Shapiro-Wilk test (up to 5000 samples)
+residual_subset <- sample(residuals(refitted_weighted_model), size = 5000)
+shapiro_test <- shapiro.test(residual_subset)
+print(shapiro_test)
+```
+<!-- Cannot do anova because selling_price_in_10k is a different response than selling_price_filtered. -->
+
+For this refitted weighted least squares model without influential points:
+
+  - The Adjusted R-squared value of 0.7897 suggests the model explains nearly 78.9% of the variance in the dependent variable, which is a strong fit.
+    - However, the quality of the fit is lower than that for the non-refitted WLS model.
+  - The BP test is not significant (p-value is 1), indicating that there is not evidence of heteroscedasticity.
+  - The Shapiro-Wilk test results show a p-value < 2.2e-16, indicating that the residuals are significantly non-normal. 
+
+## Results
+
+## Discussion
+
+## Appendix
 
 
