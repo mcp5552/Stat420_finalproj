@@ -978,7 +978,7 @@ vif(weighted_model)
 
 - All the individual predictors are significant except for "seller_typeTrustmark Dealer"(p_value=0.918) 
 
-#### Interaction model (log transformed)
+#### Full Interaction model (log transformed) | with BIC
 ```{r}
 n=nrow(train_data)
 bic_int_model_log = step(lm(selling_price_in_10k ~ (year + make_category + max_power + fuel + transmission + seller_type + owner + engine)^2, data = train_data),direction="both",k=log(n),trace=0)
@@ -1027,7 +1027,7 @@ vif(bic_int_model_log)
 
 
 ## Results
-### Summary of models used for model selection
+### Model Comparison
 
 
 |   | Model Description    | Adjusted R^2 | Number of <br>parameters | Breusch-Pagan test                                     | Shapiro-Wilk test<br>(with 5k sample residuals)   | VIF>5                                            | LOOCV<br>RMSE |
@@ -1036,7 +1036,12 @@ vif(bic_int_model_log)
 | 2 | Small additive model | 0.7097       | 14                       | Constant variance assumption <br>violated(BP = 1308.8) | Normality assumption vioalted<br>with W = 0.70295 | None                                             | 27.39708      |
 | 3 | Interaction model    | 0.726        | 17                       | Constant variance assumption <br>violated(BP = 1522.5) | Normality assumption vioalted<br>with W = 0.73061 | transmission<br>seller_type<br>fuel<br>max_power | 26.73532      |
 
-### Summary of models used for model selection after log transformation of response variable
+- Full additive model (Model 1) and Small additive model (Model 2) performed similarly in terms of Adjusted R² (~0.71) but violated the constant variance and normality assumptions.
+- The Interaction model (Model 3) improved the Adjusted R² to 0.726. But, the variance inflation factor (VIF) indicated multicollinearity with predictors transmission, seller_type, fuel, and max_power and violated the assumptions
+
+The assumptions of constant variance and normality were significantly violated, suggesting that a log transformation of the response variable might improve the model.
+
+### Model Comparison after log transformation of response variable
 
 |   | Model Description                                            | Adjusted R^2 | Number of <br>parameters | Breusch-Pagan test                                     | Shapiro-Wilk test<br>(with 5k sample residuals)   | VIF>5                                            | LOOCV<br>RMSE |
 |---|--------------------------------------------------------------|--------------|--------------------------|--------------------------------------------------------|---------------------------------------------------|--------------------------------------------------|---------------|
@@ -1046,14 +1051,30 @@ vif(bic_int_model_log)
 | 4 | Small additive BIC weighted model                            | 0.8958       | 13                       | Constant variance assumption <br>violated(BP = 144.39) | Normality assumption vioalted<br>with W = 0.99306 | None                                             | 0.2536943     |
 | 5 | Full Interaction BIC model                                   | 0.8675       | 28                       | Constant variance assumption <br>violated(BP = 426.19) | Normality assumption vioalted<br>with W = 0.98083 | engine, fuel year,<br>make_ctegory,<br>max_power | 0.2724199     |
 
-### Final model
-- From all the above analyzed models, we can see that the constant varaince assumption is violated for all the models, and this could be possible for a real dataset.
-- We can see that the Small additive BIC weighted model(model 4 in above summary table) has 
+- The Full additive model with BIC (Model 1) had an Adjusted R² of 0.8518, which was much higher than models without transformation.
+- The Small additive model with BIC (Model 2) simplified the model with fewer parameters (14) and had a similar Adjusted R² of 0.8469.
+- The Refitted small additive model without influential points (Model 3) further improved the Adjusted R² to 0.8671 but still violated the assumptions.
+- The Small additive BIC weighted model (Model 4) performed the best among all models, with
   - Highest R^2 (0.8958)
   - One of the model with least number of parameters (13)
-  - Lowest test statistic of BP = 144.39
-  - All predictors with VIF < 5
-  - Low LOOCV RMSE 0.2536943
+  - Lowest Breusch-Pagan test statistic (BP = 144.39), indicating a relatively better fit for the constant variance assumption.
+  - All predictors with VIF < 5, eliminating multicollinearity amoung predictors.
+  - Lower LOOCV RMSE 0.2536943
+- The Full Interaction BIC model (Model 5) had similar performance but used significantly more parameters (28) and still violated constant variance assumption.
+
+
+### Final model
+- From all the above analyzed models, we can see that the constant varaince assumption is violated for all the models, and this could be possible for a real dataset.
+
+- **Based on the analysis, the Small additive BIC weighted model (Model 4 after log transformation) was chosen as the final model for the following reasons:**
+
+  **Model:** lm(formula = selling_price_in_10k ~ year + make_category + max_power + transmission + fuel + seller_type + owner + engine, data = train_data)
+  
+  1. It achieves the highest Adjusted R² (0.8958), explaining nearly 90% of the variability in the log-transformed selling price of used cars.
+  2. It uses only 13 parameters, the model is more interpretable and avoids overfitting.
+  3. It has the lowest BP test statistic (144.39), suggesting a relatively better adherence to the constant variance assumption.
+  4. The predictors have VIF < 5, indicating no multicollinearity among predictors
+  5. The LOOCV RMSE (0.2536943) is the lower.
 
 ### Test predictions
 ```{r}
@@ -1079,7 +1100,71 @@ plot(price_predictions, test_residuals,
 abline(h = 0, col = "red", lwd = 2)  
 ```
 
+- Similar to the training data, the constant variance assumption is violated and we can see that as the fitted value increases, the residuals are also deviating from zero and the residuals are not closer to zero.
+
+- But the test R^2 value(0.8731878) indicates that 87.31% of the of the variance in selling_price_in_10k is explained by the predictors.
+- The Root mean square error TEST_RMSE = 18.64312, indicates a low error value when compared to the range of values of selling price.
+
+#### Comparison of predicted and actual values
+```{r}
+plot(test_data$selling_price_in_10k, price_predictions, xlab = "Actual Price", 
+     ylab = "Predicted Price", 
+     main = "Predicted vs. Actual Prices",)
+abline(a = 0, b = 1, col = "blue")
+```
+
+- The above plot, plots the actual selling price of the car from test data along the x-axis and predicted price of the car along the y-axis.
+- The blue diagonal line indicates points where actual price is equal to predicted price
+- Points close to the line indicate accurate predictions. The model performs well for lower price ranges (0–100)
+- For price range above 200, the model is not able to capture the data well.
+
 ## Discussion
+- The analysis involved multiple linear regression models to understand the factors affecting the selling price of used cars. 
+- The models were assessed based on criteria such as 
+  1. Adjusted R², 
+  2. Number of Parameters
+  3. Breusch-Pagan (BP) test, 
+  4. Shapiro-Wilk test, 
+  5. Variance Inflation Factor (VIF), and 
+  6. Leave-One-Out Cross-Validation (LOOCV) RMSE.
+
+The Small additive BIC weighted model gave better factors influencing used car prices:
+
+**Model:**  lm(formula = selling_price_in_10k ~ year + make_category + max_power + transmission + fuel + seller_type + owner + engine, data = train_data)
+
+**Year of manufacture:**
+
+- The year of manufacture with t_value=116.376 contributed significantly in determining the selling price.
+- Newer cars are associated with higher selling prices.
+
+**Engine and max_power:**
+
+- Then the car's max_power and engine with t_value 35.876 and 20.219 respectively also contributed significantly in determining the selling price.
+- Higher engine capacity and power increase the car's value.
+
+**Fuel type:**
+
+- Petrol cars are priced significantly lower (t-value = -17.993) compared to diesel cars, which serve as the reference level.
+
+**Transmission:**
+
+- Manual transmission has a negative impact on price (t-value = -5.303), indicating that automatic transmission cars have higher price.
+
+**Other**
+
+ - Similarly Make category,seller_type and ownership history also has significant impact in predicting the selling price.
+
+Logarithmic transformation can made the positively skewed distribution of selling price to be normally distributed and made it more suitable for model building and for stabilizing the variance.
+
+**Recommendations**
+
+1. Use of WLS model helped in stabilizing the varaince of the residuals.
+2. Log-Transformation of the response variable made it more suitable for model building and for stabilizing the variance.
+
+**Future Enhancements**
+
+1. Advanced machine learning models like Random Forests or Gradient Boosting can be explored to build better models.
+2. Investigating additional features, such as geographic locations of the cars, can be used to enhance the model performance.
 
 ## Appendix
 
